@@ -47,7 +47,7 @@ export default function Stock({ user }) {
       )}
       <div className="card">
         <h2>Recent stock movements</h2>
-        <table>
+        <div className="tablewrap"><table>
           <thead><tr><th>#</th><th>Date</th><th>Product</th><th>Type</th><th className="right">Qty</th><th>Remarks</th></tr></thead>
           <tbody>
             {txns.map((t) => (
@@ -57,7 +57,7 @@ export default function Stock({ user }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </>
   )

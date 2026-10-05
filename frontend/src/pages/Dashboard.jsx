@@ -20,6 +20,7 @@ export default function Dashboard() {
       <div className="stats">
         <div className="stat"><span>Total sales</span><b>{money(s.totalSales)}</b></div>
         <div className="stat"><span>Completed orders</span><b>{s.completedOrders}</b></div>
+        <div className="stat"><span>Pending orders</span><b>{s.pendingOrders}</b></div>
         <div className="stat"><span>Cancelled orders</span><b>{s.cancelledOrders}</b></div>
         <div className="stat"><span>Products</span><b>{s.productCount}</b></div>
         <div className="stat"><span>Stock value</span><b>{money(s.stockValue)}</b></div>
@@ -40,26 +41,26 @@ export default function Dashboard() {
       <div className="two">
         <div className="card">
           <h2>Top selling products</h2>
-          <table>
+          <div className="tablewrap"><table>
             <thead><tr><th>Product</th><th className="right">Sold</th><th className="right">Revenue</th></tr></thead>
             <tbody>
               {d.topProducts.map((p) => (
                 <tr key={p.productName}><td>{p.productName}</td><td className="right">{p.qtySold}</td><td className="right">{money(p.revenue)}</td></tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div className="card">
           <h2>Low stock (3 or less)</h2>
           {d.lowStock.length === 0 ? <p>All products are well stocked.</p> : (
-            <table>
+            <div className="tablewrap"><table>
               <thead><tr><th>Product</th><th className="right">Stock</th></tr></thead>
               <tbody>
                 {d.lowStock.map((p) => (
                   <tr key={p.productId}><td>{p.productName}</td><td className="right">{p.stockQuantity}</td></tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       </div>

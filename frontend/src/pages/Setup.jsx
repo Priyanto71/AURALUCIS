@@ -45,10 +45,10 @@ function Categories({ isManager, flash }) {
           <button className="primary">Add</button>
         </form>
       )}
-      <table>
+      <div className="tablewrap"><table>
         <thead><tr><th>ID</th><th>Name</th><th>Description</th></tr></thead>
         <tbody>{rows.map((c) => <tr key={c.categoryId}><td>{c.categoryId}</td><td>{c.categoryName}</td><td>{c.description}</td></tr>)}</tbody>
-      </table>
+      </table></div>
     </div>
   )
 }
@@ -77,14 +77,14 @@ function Suppliers({ isManager, flash }) {
           <button className="primary">Add</button>
         </form>
       )}
-      <table>
+      <div className="tablewrap"><table>
         <thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>
         <tbody>
           {rows.map((s) => (
             <tr key={s.supplierId}><td>{s.supplierId}</td><td>{s.supplierName}</td><td>{s.contactPerson}</td><td>{s.phone}</td><td>{s.email}</td><td>{s.address}</td></tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   )
 }
@@ -94,12 +94,43 @@ const emptyEmployee = { firstName: '', lastName: '', role: 'Staff', phone: '', e
 function Employees({ isManager, flash }) {
   const [rows, load] = useList('/api/employees', flash)
   const [f, setF] = useState(emptyEmployee)
+  const [editingId, setEditingId] = useState(null)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+
+  const startEdit = (e) => {
+    setF({ ...emptyEmployee, firstName: e.firstName, lastName: e.lastName, role: e.role === 'Manager' ? 'Manager' : 'Staff', phone: e.phone ?? '', email: e.email ?? '' })
+    setEditingId(e.employeeId)
+  }
+  const cancelEdit = () => { setEditingId(null); setF(emptyEmployee) }
+
   const save = async (e) => {
     e.preventDefault()
-    try { await api.post('/api/employees', f); setF(emptyEmployee); flash('ok', 'Employee added. They can log in now.'); load() }
+    try {
+      if (editingId) {
+        await api.put(`/api/employees/${editingId}`, { firstName: f.firstName, lastName: f.lastName, role: f.role, phone: f.phone, email: f.email })
+        flash('ok', 'Employee updated.')
+      } else {
+        await api.post('/api/employees', f)
+        flash('ok', 'Employee added. They can log in now.')
+      }
+      cancelEdit(); load()
+    } catch (err) { flash('error', err.message) }
+  }
+
+  const toggleActive = async (emp) => {
+    const enable = emp.isActive !== 1
+    if (!confirm(`${enable ? 'Enable' : 'Disable'} the login of ${emp.firstName} ${emp.lastName}?`)) return
+    try { await api.post(`/api/employees/${emp.employeeId}/active`, { active: enable }); flash('ok', enable ? 'Account enabled.' : 'Account disabled.'); load() }
     catch (err) { flash('error', err.message) }
   }
+
+  const resetPassword = async (emp) => {
+    const pw = prompt(`New password for ${emp.firstName} ${emp.lastName} (at least 6 characters):`)
+    if (pw === null) return
+    try { await api.post(`/api/employees/${emp.employeeId}/reset-password`, { newPassword: pw }); flash('ok', 'Password reset. The person must sign in again.') }
+    catch (err) { flash('error', err.message) }
+  }
+
   return (
     <div className="card">
       <h2>Employees</h2>
@@ -115,19 +146,32 @@ function Employees({ isManager, flash }) {
           </label>
           <label>Phone<input value={f.phone} onChange={set('phone')} /></label>
           <label>Email (unique)<input value={f.email} onChange={set('email')} /></label>
-          <label>Username (unique)<input required value={f.username} onChange={set('username')} /></label>
-          <label>Password (min 6)<input required type="password" minLength="6" value={f.password} onChange={set('password')} /></label>
-          <button className="primary">Add</button>
+          {!editingId && <label>Username (unique)<input required value={f.username} onChange={set('username')} /></label>}
+          {!editingId && <label>Password (min 6)<input required type="password" minLength="6" value={f.password} onChange={set('password')} /></label>}
+          <div>
+            <button className="primary">{editingId ? 'Update' : 'Add'}</button>{' '}
+            {editingId && <button type="button" className="small" onClick={cancelEdit}>Cancel</button>}
+          </div>
         </form>
       )}
-      <table>
-        <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Username</th><th>Phone</th><th>Email</th></tr></thead>
+      <div className="tablewrap"><table>
+        <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Username</th><th>Phone</th><th>Email</th><th>Status</th>{isManager && <th></th>}</tr></thead>
         <tbody>
           {rows.map((e) => (
-            <tr key={e.employeeId}><td>{e.employeeId}</td><td>{e.firstName} {e.lastName}</td><td>{e.role}</td><td>{e.username}</td><td>{e.phone}</td><td>{e.email}</td></tr>
+            <tr key={e.employeeId}>
+              <td>{e.employeeId}</td><td>{e.firstName} {e.lastName}</td><td>{e.role}</td><td>{e.username}</td><td>{e.phone}</td><td>{e.email}</td>
+              <td><span className={`badge ${e.isActive === 1 ? 'Active' : 'Disabled'}`}>{e.isActive === 1 ? 'Active' : 'Disabled'}</span></td>
+              {isManager && (
+                <td className="actions">
+                  <button className="small" onClick={() => startEdit(e)}>Edit</button>
+                  <button className="small" onClick={() => resetPassword(e)}>Reset password</button>
+                  <button className={`small${e.isActive === 1 ? ' danger' : ''}`} onClick={() => toggleActive(e)}>{e.isActive === 1 ? 'Disable' : 'Enable'}</button>
+                </td>
+              )}
+            </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   )
 }
