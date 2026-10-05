@@ -26,4 +26,11 @@ public class TokenStore
     }
 
     public void Revoke(string token) => _tokens.TryRemove(token, out _);
+
+    // Logs an employee out everywhere (account disabled, role changed or password reset).
+    public void RevokeEmployee(int employeeId)
+    {
+        foreach (var pair in _tokens.Where(p => p.Value.EmployeeId == employeeId))
+            _tokens.TryRemove(pair.Key, out _);
+    }
 }

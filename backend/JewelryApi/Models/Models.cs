@@ -40,6 +40,7 @@ public class Employee
     public int EmployeeId { get; set; } public string FirstName { get; set; } = ""; public string LastName { get; set; } = "";
     public string Role { get; set; } = ""; public string? Phone { get; set; } public string? Email { get; set; }
     public string? Username { get; set; }
+    public int IsActive { get; set; }
 }
 
 // Used only by the login endpoint (includes the password hash, never sent to the browser)
@@ -47,6 +48,7 @@ public class EmployeeLogin
 {
     public int EmployeeId { get; set; } public string FirstName { get; set; } = ""; public string LastName { get; set; } = "";
     public string Role { get; set; } = ""; public string? Username { get; set; } public string? PasswordHash { get; set; }
+    public int IsActive { get; set; }
 }
 
 // Row shape of view VW_ORDER_SUMMARY
@@ -73,12 +75,27 @@ public class StockTxn
 public record LoginRequest(string Username, string Password);
 public record EmployeeCreateRequest(string FirstName, string LastName, string Role, string? Phone, string? Email, string Username, string Password);
 public record SaleLine(int ProductId, int Quantity);
-public record SaleRequest(int CustomerId, List<SaleLine> Items);
+public record SaleRequest(int CustomerId, List<SaleLine> Items, bool? Pending);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record ResetPasswordRequest(string NewPassword);
+public record EmployeeUpdateRequest(string FirstName, string LastName, string Role, string? Phone, string? Email);
+public record SetActiveRequest(bool Active);
 public record RestockRequest(int ProductId, int Quantity, string? Remarks);
 
 // ---- Dashboard / reports ----
-public class SalesSummary { public decimal TotalSales { get; set; } public int CompletedOrders { get; set; } public int CancelledOrders { get; set; } }
+public class SalesSummary { public decimal TotalSales { get; set; } public int CompletedOrders { get; set; } public int CancelledOrders { get; set; } public int PendingOrders { get; set; } }
 public class StockSummary { public int ProductCount { get; set; } public decimal StockValue { get; set; } }
 public class LowStockItem { public int ProductId { get; set; } public string ProductName { get; set; } = ""; public int StockQuantity { get; set; } }
 public class DailySales { public DateTime SaleDay { get; set; } public int OrderCount { get; set; } public decimal Total { get; set; } }
 public class TopProduct { public string ProductName { get; set; } = ""; public int QtySold { get; set; } public decimal Revenue { get; set; } }
+
+// ---- Receipt, customer history, sales report ----
+public class ReceiptHeader
+{
+    public int OrderId { get; set; } public DateTime OrderDate { get; set; } public string Status { get; set; } = "";
+    public decimal TotalAmount { get; set; }
+    public string? CustomerName { get; set; } public string? CustomerPhone { get; set; } public string? CustomerAddress { get; set; }
+    public string? EmployeeName { get; set; }
+}
+public class CustomerStats { public decimal TotalSpent { get; set; } public int OrderCount { get; set; } }
+public class ReportRow { public string Label { get; set; } = ""; public int Qty { get; set; } public decimal Revenue { get; set; } }
