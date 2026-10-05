@@ -1,0 +1,12 @@
+# .NET
+bin/
+obj/
+.vs/
+*.user
+
+# Secrets (keep appsettings.example.json instead)
+backend/JewelryApi/appsettings.json
+
+# Node
+node_modules/
+dist/
