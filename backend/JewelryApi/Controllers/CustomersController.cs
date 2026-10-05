@@ -43,4 +43,35 @@ public class CustomersController(DbConnectionFactory db) : ControllerBase
             new { fn = c.FirstName, ln = c.LastName, phone = c.Phone, email = c.Email, address = c.Address, id });
         return n == 0 ? NotFound() : NoContent();
     }
+
+    // Purchase history of one customer: details, totals and all their orders.
+    [HttpGet("{id:int}/history")]
+    public async Task<IActionResult> History(int id)
+    {
+        using var conn = db.Create();
+        var customer = await conn.QueryFirstOrDefaultAsync<Customer>(
+            "SELECT customer_id, first_name, last_name, phone, email, address FROM customers WHERE customer_id = :id",
+            new { id });
+        if (customer is null) return NotFound(new { error = "Customer not found." });
+
+        // total spent counts Completed orders only
+        var stats = await conn.QuerySingleAsync<CustomerStats>(
+            @"SELECT NVL(SUM(CASE WHEN status = 'Completed' THEN total_amount END), 0) AS total_spent,
+                     COUNT(*) AS order_count
+              FROM orders WHERE customer_id = :id", new { id });
+
+        var orders = await conn.QueryAsync<OrderSummary>(
+            @"SELECT o.order_id, o.order_date, o.status,
+                     c.first_name || ' ' || c.last_name AS customer_name,
+                     e.first_name || ' ' || e.last_name AS employee_name,
+                     o.total_amount AS order_total,
+                     (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.order_id) AS item_count
+              FROM orders o
+              JOIN customers c ON c.customer_id = o.customer_id
+              LEFT JOIN employees e ON e.employee_id = o.employee_id
+              WHERE o.customer_id = :id
+              ORDER BY o.order_id DESC", new { id });
+
+        return Ok(new { customer, totalSpent = stats.TotalSpent, orderCount = stats.OrderCount, orders });
+    }
 }
