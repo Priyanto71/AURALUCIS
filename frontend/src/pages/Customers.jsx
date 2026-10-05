@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, money, downloadCsv } from '../api.js'
 import Msg from './Messages.jsx'
+import Modal from '../components/Modal.jsx'
+import Receipt from '../components/Receipt.jsx'
 
 const empty = { firstName: '', lastName: '', phone: '', email: '', address: '' }
 
@@ -10,12 +12,17 @@ export default function Customers() {
   const [editingId, setEditingId] = useState(null)
   const [search, setSearch] = useState('')
   const [msg, setMsg] = useState(null)
+  const [history, setHistory] = useState(null) // purchase history shown in a pop-up
+  const [receiptId, setReceiptId] = useState(null)
 
-  const load = async (phone = search) => {
-    try { setRows(await api.get('/api/customers' + (phone ? `?phone=${encodeURIComponent(phone)}` : ''))) }
+  const load = async () => {
+    try { setRows(await api.get('/api/customers')) }
     catch (e) { setMsg({ type: 'error', text: e.message }) }
   }
-  useEffect(() => { load('') }, [])
+  useEffect(() => { load() }, [])
+
+  const shown = rows.filter((c) =>
+    `${c.firstName} ${c.lastName} ${c.phone ?? ''} ${c.email ?? ''} ${c.address ?? ''}`.toLowerCase().includes(search.toLowerCase()))
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -36,6 +43,14 @@ export default function Customers() {
     } catch (e) { setMsg({ type: 'error', text: e.message }) }
   }
 
+  const openHistory = async (id) => {
+    try { setHistory(await api.get(`/api/customers/${id}/history`)) }
+    catch (e) { setMsg({ type: 'error', text: e.message }) }
+  }
+
+  const exportCsv = () => downloadCsv('customers.csv', ['ID', 'First name', 'Last name', 'Phone', 'Email', 'Address'],
+    shown.map((c) => [c.customerId, c.firstName, c.lastName, c.phone, c.email, c.address]))
+
   return (
     <>
       <Msg msg={msg} />
@@ -53,24 +68,60 @@ export default function Customers() {
           </div>
         </form>
       </div>
+
       <div className="card">
-        <h2>Customers</h2>
-        <p>
-          <input placeholder="Search by mobile..." value={search} onChange={(e) => setSearch(e.target.value)} />{' '}
-          <button className="small" onClick={() => load(search)}>Search</button>
-        </p>
-        <table>
+        <div className="cardhead">
+          <h2>Customers <span className="hint">({shown.length} of {rows.length})</span></h2>
+          <button className="small" onClick={exportCsv}>Export CSV</button>
+        </div>
+        <div className="row">
+          <label className="grow">Search<input placeholder="Name, mobile, email, address..." value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+        </div>
+        <div className="tablewrap"><table>
           <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th></th></tr></thead>
           <tbody>
-            {rows.map((c) => (
+            {shown.map((c) => (
               <tr key={c.customerId}>
                 <td>{c.customerId}</td><td>{c.firstName} {c.lastName}</td><td>{c.phone}</td><td>{c.email}</td><td>{c.address}</td>
-                <td><button className="small" onClick={() => startEdit(c)}>Edit</button></td>
+                <td className="actions">
+                  <button className="small" onClick={() => openHistory(c.customerId)}>History</button>
+                  <button className="small" onClick={() => startEdit(c)}>Edit</button>
+                </td>
               </tr>
             ))}
+            {shown.length === 0 && <tr><td colSpan="6" className="hint">No customers match.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
+
+      {history && (
+        <Modal wide onClose={() => setHistory(null)}>
+          <h2>{history.customer.firstName} {history.customer.lastName}</h2>
+          <p className="hint">{history.customer.phone} {history.customer.email && ` | ${history.customer.email}`} {history.customer.address && ` | ${history.customer.address}`}</p>
+          <div className="stats">
+            <div className="stat"><span>Total spent (completed)</span><b>{money(history.totalSpent)}</b></div>
+            <div className="stat"><span>Orders</span><b>{history.orderCount}</b></div>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <div className="tablewrap"><table>
+              <thead><tr><th>#</th><th>Date</th><th>Status</th><th>Served by</th><th className="right">Items</th><th className="right">Total</th><th></th></tr></thead>
+              <tbody>
+                {history.orders.map((o) => (
+                  <tr key={o.orderId}>
+                    <td>{o.orderId}</td><td>{new Date(o.orderDate).toLocaleDateString()}</td>
+                    <td><span className={`badge ${o.status}`}>{o.status}</span></td>
+                    <td>{o.employeeName}</td><td className="right">{o.itemCount}</td><td className="right">{money(o.orderTotal)}</td>
+                    <td><button className="small" onClick={() => setReceiptId(o.orderId)}>Receipt</button></td>
+                  </tr>
+                ))}
+                {history.orders.length === 0 && <tr><td colSpan="7" className="hint">No orders yet.</td></tr>}
+              </tbody>
+            </table></div>
+          </div>
+          <div className="modal-actions"><button className="small" onClick={() => setHistory(null)}>Close</button></div>
+        </Modal>
+      )}
+      {receiptId && <Receipt orderId={receiptId} onClose={() => setReceiptId(null)} />}
     </>
   )
 }

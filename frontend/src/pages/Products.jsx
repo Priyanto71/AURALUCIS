@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, money } from '../api.js'
+import { useEffect, useMemo, useState } from 'react'
+import { api, money, downloadCsv } from '../api.js'
 import Msg from './Messages.jsx'
 
 const empty = { productName: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, unitPrice: '', stockQuantity: 0 }
@@ -12,6 +12,11 @@ export default function Products({ user }) {
   const [form, setForm] = useState(empty)
   const [editingId, setEditingId] = useState(null)
   const [msg, setMsg] = useState(null)
+  // search and filters (done in the browser on the loaded list)
+  const [q, setQ] = useState('')
+  const [fCategory, setFCategory] = useState('')
+  const [fMetal, setFMetal] = useState('')
+  const [lowOnly, setLowOnly] = useState(false)
 
   const load = async () => {
     try {
@@ -20,6 +25,16 @@ export default function Products({ user }) {
     } catch (e) { setMsg({ type: 'error', text: e.message }) }
   }
   useEffect(() => { load() }, [])
+
+  const metals = useMemo(() => [...new Set(products.map((p) => p.metalType))].sort(), [products])
+
+  const shown = products.filter((p) => {
+    const text = `${p.productName} ${p.categoryName ?? ''} ${p.supplierName ?? ''} ${p.metalType} ${p.purity ?? ''}`.toLowerCase()
+    return text.includes(q.toLowerCase())
+      && (!fCategory || p.categoryName === fCategory)
+      && (!fMetal || p.metalType === fMetal)
+      && (!lowOnly || p.stockQuantity <= 3)
+  })
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -63,6 +78,10 @@ export default function Products({ user }) {
     catch (e) { setMsg({ type: 'error', text: e.message }) }
   }
 
+  const exportCsv = () => downloadCsv('products.csv',
+    ['ID', 'Name', 'Category', 'Supplier', 'Metal', 'Purity', 'Weight (g)', 'Unit price', 'Making charge', 'Stock', 'Stock value'],
+    shown.map((p) => [p.productId, p.productName, p.categoryName, p.supplierName, p.metalType, p.purity, p.weightGrams, p.unitPrice, p.makingCharge, p.stockQuantity, p.stockValue]))
+
   return (
     <>
       <Msg msg={msg} />
@@ -98,13 +117,35 @@ export default function Products({ user }) {
           </form>
         </div>
       )}
+
       <div className="card">
-        <h2>Catalog</h2>
+        <div className="cardhead">
+          <h2>Catalog <span className="hint">({shown.length} of {products.length})</span></h2>
+          <button className="small" onClick={exportCsv}>Export CSV</button>
+        </div>
         <p className="hint">Sale price of one piece = unit price + making charge.</p>
-        <table>
+
+        <div className="row">
+          <label className="grow">Search<input placeholder="Name, metal, category, supplier..." value={q} onChange={(e) => setQ(e.target.value)} /></label>
+          <label>Category
+            <select value={fCategory} onChange={(e) => setFCategory(e.target.value)}>
+              <option value="">All</option>
+              {categories.map((c) => <option key={c.categoryId} value={c.categoryName}>{c.categoryName}</option>)}
+            </select>
+          </label>
+          <label>Metal
+            <select value={fMetal} onChange={(e) => setFMetal(e.target.value)}>
+              <option value="">All</option>
+              {metals.map((m) => <option key={m}>{m}</option>)}
+            </select>
+          </label>
+          <label className="checkline"><input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} /> Low stock only (3 or less)</label>
+        </div>
+
+        <div className="tablewrap"><table>
           <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Supplier</th><th>Metal</th><th className="right">Weight</th><th className="right">Unit price</th><th className="right">Making</th><th className="right">Stock</th><th className="right">Stock value</th>{isManager && <th></th>}</tr></thead>
           <tbody>
-            {products.map((p) => (
+            {shown.map((p) => (
               <tr key={p.productId}>
                 <td>{p.productId}</td><td>{p.productName}</td><td>{p.categoryName}</td><td>{p.supplierName}</td>
                 <td>{p.metalType} {p.purity}</td>
@@ -114,15 +155,16 @@ export default function Products({ user }) {
                 <td className="right">{p.stockQuantity}</td>
                 <td className="right">{money(p.stockValue)}</td>
                 {isManager && (
-                  <td>
+                  <td className="actions">
                     <button className="small" onClick={() => startEdit(p.productId)}>Edit</button>
                     <button className="small danger" onClick={() => remove(p.productId)}>Delete</button>
                   </td>
                 )}
               </tr>
             ))}
+            {shown.length === 0 && <tr><td colSpan="11" className="hint">No products match.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </>
   )
