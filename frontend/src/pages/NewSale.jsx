@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, money } from '../api.js'
 import Msg from './Messages.jsx'
+import Receipt from '../components/Receipt.jsx'
 
 export default function NewSale({ user }) {
   const [customers, setCustomers] = useState([])
@@ -9,6 +10,8 @@ export default function NewSale({ user }) {
   const [pickId, setPickId] = useState('')
   const [pickQty, setPickQty] = useState(1)
   const [cart, setCart] = useState([]) // [{ productId, quantity }]
+  const [pending, setPending] = useState(false)
+  const [receiptId, setReceiptId] = useState(null)
   const [msg, setMsg] = useState(null)
 
   const load = async () => {
@@ -50,9 +53,14 @@ export default function NewSale({ user }) {
     e.preventDefault()
     if (cart.length === 0) { setMsg({ type: 'error', text: 'Add at least one product.' }); return }
     try {
-      const r = await api.post('/api/orders/sale', { customerId: Number(customerId), items: cart })
-      setMsg({ type: 'ok', text: `Sale recorded. Order #${r.orderId}` })
-      setCart([]); load()
+      const r = await api.post('/api/orders/sale', { customerId: Number(customerId), items: cart, pending })
+      setMsg({
+        type: 'ok',
+        text: r.status === 'Pending'
+          ? `Order #${r.orderId} is on hold (Pending). Stock is reserved. Complete it from the Orders tab.`
+          : `Sale recorded. Order #${r.orderId}`,
+      })
+      setCart([]); setPending(false); setReceiptId(r.orderId); load()
     } catch (err) { setMsg({ type: 'error', text: err.message }) }
   }
 
@@ -85,7 +93,7 @@ export default function NewSale({ user }) {
 
           <h3>Cart</h3>
           {cart.length === 0 ? <p className="hint">Cart is empty.</p> : (
-            <table>
+            <div className="tablewrap"><table>
               <thead><tr><th>Product</th><th className="right">Price / piece</th><th className="right">Qty</th><th className="right">Line total</th><th></th></tr></thead>
               <tbody>
                 {cart.map((l) => {
@@ -102,11 +110,19 @@ export default function NewSale({ user }) {
                 })}
                 <tr><th colSpan="3" className="right">Grand total</th><th className="right">{money(total)}</th><th></th></tr>
               </tbody>
-            </table>
+            </table></div>
           )}
-          <p><button className="primary">Confirm sale</button></p>
+
+          <p>
+            <label className="checkline">
+              <input type="checkbox" checked={pending} onChange={(e) => setPending(e.target.checked)} />
+              Hold as Pending (reserve the stock now, complete the order later)
+            </label>
+          </p>
+          <p><button className="primary">{pending ? 'Place order on hold' : 'Confirm sale'}</button></p>
         </form>
       </div>
+      {receiptId && <Receipt orderId={receiptId} onClose={() => setReceiptId(null)} />}
     </>
   )
 }
