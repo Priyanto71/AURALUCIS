@@ -38,3 +38,20 @@ export const api = {
 }
 
 export const money = (n) => Number(n ?? 0).toFixed(2)
+
+// Downloads a CSV file (opens fine in Excel). header = array of titles, rows = array of arrays.
+export function downloadCsv(filename, header, rows) {
+  const esc = (v) => {
+    const t = String(v ?? '')
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+  }
+  const text = [header, ...rows].map((r) => r.map(esc).join(',')).join('\r\n')
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8;' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(a.href)
+}
