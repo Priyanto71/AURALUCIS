@@ -8,21 +8,32 @@ import NewSale from './pages/NewSale.jsx'
 import Orders from './pages/Orders.jsx'
 import Stock from './pages/Stock.jsx'
 import Reports from './pages/Reports.jsx'
+import Audit from './pages/Audit.jsx'
 import Setup from './pages/Setup.jsx'
 import ChangePassword from './components/ChangePassword.jsx'
-import{LayoutDashboard, ShoppingBasket,UserRound,ShoppingCart, ScrollText,Package,ChartLine, Settings, Sun,Moon,KeyRound, LogOut} from 'lucide-react'
 
 const TABS = {
-  Dashboard, Products, Customers, 'New sale': NewSale, Orders, Stock, Reports, Setup,
+  Dashboard, Products, Customers, 'New sale': NewSale, Orders, Stock, Reports, Audit, Setup,
 }
 const ICONS = {
-  Dashboard: <LayoutDashboard />, Products: <ShoppingBasket />, Customers: <UserRound />, 'New sale': <ShoppingCart />, Orders: <ScrollText />, Stock: <Package />, Reports: <ChartLine />, Setup: <Settings />,
+  Dashboard: '📊', Products: '💎', Customers: '👤', 'New sale': '🛒', Orders: '🧾', Stock: '📦', Reports: '📈', Audit: '🕵️', Setup: '⚙️',
 }
 const THEME_KEY = 'auralucis_theme'
+const MANAGER_ONLY = ['Reports', 'Audit']
+
+// the public QR page can send a logged-in employee straight to an order
+function readGoto() {
+  try {
+    const g = JSON.parse(sessionStorage.getItem('auralucis_goto'))
+    sessionStorage.removeItem('auralucis_goto')
+    return g
+  } catch { return null }
+}
 
 export default function App() {
   const [user, setUser] = useState(getUser())
-  const [tab, setTab] = useState('Dashboard')
+  const [goto] = useState(readGoto)
+  const [tab, setTab] = useState(goto?.tab || 'Dashboard')
   const [theme, setTheme] = useState(localStorage.getItem(THEME_KEY) || 'light')
   const [showPassword, setShowPassword] = useState(false)
 
@@ -47,8 +58,8 @@ export default function App() {
 
   if (!user) return <Login onLogin={(u) => { setTab('Dashboard'); setUser(u) }} />
 
-  // Reports show money totals, so only a Manager gets that tab
-  const names = Object.keys(TABS).filter((t) => t !== 'Reports' || user.role === 'Manager')
+  // Reports and the audit log are for Managers only
+  const names = Object.keys(TABS).filter((t) => !MANAGER_ONLY.includes(t) || user.role === 'Manager')
   const Page = TABS[names.includes(tab) ? tab : 'Dashboard']
   const current = names.includes(tab) ? tab : 'Dashboard'
 
@@ -79,17 +90,17 @@ export default function App() {
           </div>
           <div className="userbtns">
             <button className="small" title="Light / dark mode" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              {theme === 'dark' ? <Sun /> : <Moon />}
+              {theme === 'dark' ? '☀️' : '🌙'}
             </button>
-            <button className="small" title="Change password" onClick={() => setShowPassword(true)}><KeyRound /></button>
-            <button className="small" title="Logout" onClick={logout}><span className="lbl-txt">Logout</span><span className="lbl-ico"><LogOut /></span></button>
+            <button className="small" title="Change password" onClick={() => setShowPassword(true)}>🔑</button>
+            <button className="small" title="Logout" onClick={logout}><span className="lbl-txt">Logout</span><span className="lbl-ico">🚪</span></button>
           </div>
         </div>
       </aside>
 
       <main className="content">
         <h2 className="pagetitle">{current}</h2>
-        <Page user={user} />
+        <Page user={user} initialQuery={current === goto?.tab ? goto?.q : undefined} />
       </main>
 
       {showPassword && <ChangePassword onClose={() => setShowPassword(false)} />}

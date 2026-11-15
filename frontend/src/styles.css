@@ -100,8 +100,8 @@ button { font-family: inherit; }
 button.primary { padding: 10px 18px; background: var(--gold); color: #fff; border: 0; border-radius: 8px; font-size: 14px; cursor: pointer; }
 button.primary:hover { background: #a3841f; }
 button.primary:disabled { opacity: .6; cursor: wait; }
-button.small { padding: 5px 11px; margin-right: 4px; border: 1px solid var(--btn-line); background: var(--btn-bg); color: var(--btn-text); border-radius: 6px; cursor: pointer; font-size: 13px; }
-button.small:hover { background: var(--btn-hover); }
+button.small, a.small { padding: 5px 11px; margin-right: 4px; border: 1px solid var(--btn-line); background: var(--btn-bg); color: var(--btn-text); border-radius: 6px; cursor: pointer; font-size: 13px; }
+button.small:hover, a.small:hover { background: var(--btn-hover); }
 button.danger { color: var(--danger); border-color: var(--danger); }
 .userbox button.small { background: transparent; color: #e6d7a8; border-color: #5a4a1a; margin: 0; }
 .userbox button.small:hover { background: #1a1a1a; }
@@ -123,7 +123,7 @@ tbody tr:hover { background: var(--row-hover); }
 .badge.role { background: var(--gold); color: #fff; width: fit-content; }
 
 /* ---------- dashboard & reports ---------- */
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 18px; }
 .stat { background: var(--ink); border: 1px solid var(--gold); border-radius: 12px; padding: 16px; color: #e6d7a8; display: flex; flex-direction: column; gap: 6px; }
 .stat span { font-size: 12px; color: #b8a77a; }
 .stat b { font-size: 24px; color: #d9b45a; }
@@ -181,6 +181,40 @@ tbody tr:hover { background: var(--row-hover); }
   .receipt-sheet { border: 0; max-width: 80mm; }
 }
 
+
+/* ---------- charts, sale summary, receipt extras ---------- */
+.pie { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 160px; }
+.legend li { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.lname { flex: 1; }
+.lval em { color: var(--muted); font-style: normal; margin-left: 4px; }
+
+.summary { max-width: 360px; margin: 14px 0 6px auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.summary div { display: flex; justify-content: space-between; padding: 3px 0; font-size: 14px; }
+.summary .grand { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; font-size: 16px; }
+.summary .duecell b { color: var(--danger); }
+.dueamt { color: var(--danger); font-weight: 600; }
+td.wrap { white-space: normal; min-width: 260px; }
+.badge.tx-SALE { background: var(--warn-bg); color: var(--warn-text); }
+.badge.tx-RESTOCK { background: var(--ok-bg); color: var(--ok-text); }
+.badge.tx-RETURN { background: var(--ok-bg); color: var(--ok-text); }
+.badge.tx-ADJUSTMENT { background: var(--err-bg); color: var(--err-text); }
+
+.r-sums div { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.r-sums span { color: #555; }
+.r-due { color: #b00020; font-weight: 700; }
+.r-qr { text-align: center; margin-top: 12px; }
+.r-qr img { display: block; margin: 0 auto; }
+.r-qr p { margin: 4px 0 0; font-size: 11px; color: #555; }
+.r-verified { text-align: center; color: #27500a; font-weight: 600; margin: 4px 0 8px; }
+.verify-card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--gold); border-radius: 14px; padding: 16px; }
+
+.send { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.sendbtns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+a.linkbtn { text-decoration: none; display: inline-block; line-height: 1.2; }
+@media print { .send { display: none !important; } }
+
 /* ---------- tablets and phones ---------- */
 @media (max-width: 860px) {
   .shell { flex-direction: column; }
@@ -218,12 +252,14 @@ tbody tr:hover { background: var(--row-hover); }
   input, select { font-size: 16px; padding: 11px 10px; }
   button.primary { width: 100%; padding: 12px; font-size: 15px; }
   .modal-actions button.primary { width: auto; }
-  button.small { padding: 8px 12px; }
+  button.small, a.small { padding: 8px 12px; }
 
   /* wide tables scroll sideways inside their card */
   table { min-width: max-content; }
   th, td { white-space: nowrap; }
   .receipt-sheet table { min-width: 0; }
+  .summary { max-width: none; }
+  td.wrap { min-width: 220px; }
   .receipt-sheet th, .receipt-sheet td { white-space: normal; }
 }
 
