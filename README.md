@@ -18,6 +18,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 - **Sales:** multi-product cart, discount (amount or percent, Staff limited to 10 %), shop VAT, payment method (Cash, Card, bKash, Nagad, Bank), part payment with a due balance, Pending orders that reserve stock.
 - **Receipt:** printable, **Download PDF**, **e-mail**, **WhatsApp**, and a **QR code** that opens a public read-only receipt page (no login, no personal data).
 - **Pricing by metal rate:** a product can be priced as weight x today's gold/silver rate per gram, with the making charge as a fixed amount or a percent. A Manager sets the daily rate (Rates tab) and every product priced by it is repriced at once; rate history is kept.
+- **Returns and exchanges (Manager):** return items from a completed order and refund the money (Cash, Card, bKash, Nagad, Bank), or exchange them for other items. The value includes the order's discount share and VAT; stock goes back; sales, profit and dues are shown net of returns.
 - **Stock:** restock with cost price and supplier, **stock adjustment** (damaged, lost, found, correction), full stock history.
 - **Profit:** cost price per product (weighted average on restock), gross profit and margin in reports. Cost prices are visible to Managers only.
 - **Reports and charts:** dashboard with line chart (30 days) and pie charts (category, payment method); date-range report with profit, VAT, discounts, dues; CSV export everywhere.
@@ -38,7 +39,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 
 ```
 AURALUCIS/
-  database/            SQL scripts (run in numeric order, 01 to 09)
+  database/            SQL scripts (run in numeric order, 01 to 10)
   backend/JewelryApi/  ASP.NET Core Web API
   frontend/            React + Vite app
   scripts/             backup and restore scripts
@@ -47,11 +48,11 @@ AURALUCIS/
 
 ## Database design
 
-Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `metal_rates`, `shop_settings`, `audit_log`.
+Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `order_returns`, `order_return_items`, `metal_rates`, `shop_settings`, `audit_log`.
 
 - Auto IDs with sequences and before-insert triggers (Oracle 10g has no auto-increment)
 - Views: `vw_product_catalog`, `vw_order_summary`
-- Package `pkg_jewelry`: `create_order`, `add_order_item`, `finalize_order`, `add_payment`, `receive_payment`, `record_sale`, `restock_product`, `adjust_stock`, `complete_order`, `cancel_order`
+- Package `pkg_jewelry`: `create_order`, `add_order_item`, `finalize_order`, `add_payment`, `receive_payment`, `record_sale`, `restock_product`, `adjust_stock`, `complete_order`, `cancel_order`; package `pkg_returns`: `start_return`, `return_item`, `finish_return`, `settle_return`
 - Constraints: no negative stock, positive quantities, valid order status and payment method, unique customer phone, employee email and username
 - Passwords are stored as PBKDF2 hashes, never as plain text
 
@@ -66,7 +67,7 @@ CREATE USER your_user IDENTIFIED BY your_password;
 GRANT CONNECT, RESOURCE, CREATE VIEW TO your_user;
 ALTER USER your_user QUOTA UNLIMITED ON USERS;
 ```
-Connect as that user and run the scripts in `database/` in order: `01` to `09`. Run each only once. Take a backup before each upgrade script.
+Connect as that user and run the scripts in `database/` in order: `01` to `10`. Run each only once. Take a backup before each upgrade script.
 
 Demo logins created by `06`: `admin` / `admin123` (Manager) and `staff` / `staff123` (Staff). Change them for real use.
 
@@ -121,7 +122,9 @@ The QR code opens `<website link>/verify/<random code>`. `localhost` only works 
 | POST | `/api/orders/{id}/payments` | logged in | take a payment |
 | POST | `/api/orders/{id}/email` | logged in | e-mail the receipt |
 | POST | `/api/orders/{id}/complete` | logged in | Pending to Completed |
-| POST | `/api/orders/{id}/cancel` | Manager | cancel and return stock |
+| POST | `/api/orders/{id}/cancel` | Manager | cancel and return stock (not allowed after items were returned) |
+| GET | `/api/returns`, `/api/returns/order/{id}` | Manager | return history / what can still be returned from an order |
+| POST | `/api/returns`, `/api/returns/exchange` | Manager | return and refund / return and exchange in one transaction |
 | POST | `/api/stock/restock`, `/api/stock/adjust` | Manager | add stock with cost / adjust stock |
 | GET | `/api/stock/transactions` | logged in | stock history |
 
@@ -140,6 +143,6 @@ See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts
 - [x] Audit log, charts, QR code, PDF and e-mail receipts
 - [x] Backup and restore guide
 - [x] Daily metal-rate pricing and making charge in percent
-- [ ] Sales return and exchange
+- [x] Sales return, refund and exchange
 - [ ] Branch stock requests and approval
 - [ ] Product images

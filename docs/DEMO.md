@@ -43,3 +43,11 @@ Logins: admin / admin123 (Manager), staff / staff123 (Staff)
 2. Change the rate to 1250 on the Rates tab. The ring's price updates at once (10625). Dashboard shows "Today's metal rates".
 3. Rate history lists both rates with who set them. The audit log shows SET_RATE.
 4. A sale made before the change keeps its old price on the receipt.
+
+## Return and exchange to show (Manager)
+1. Make a sale with two products, a 10 % discount and pay in full. Note the order number.
+2. Returns tab: type the order number, Find. Return 1 piece of one product, reason "Wrong size", choose "Money back" by Cash. The summary shows the value of the returned item (with its discount share and VAT) and the refund.
+3. Stock tab: a RETURN line appears and the stock went up by 1. Orders tab: the order shows a "returned ..." tag and cannot be cancelled any more.
+4. Dashboard and Reports: sales are lower by the returned value. Receipt of the order shows "Returned items (credit)".
+5. Exchange: Returns, find another order, return a piece, choose "Exchange for other items", add the new product. The credit pays part of the new order; the customer pays the difference. A new receipt opens with "Credit from returned items" as a payment.
+6. Audit tab: RETURN and EXCHANGE lines with who and why. Staff login: no Returns tab.
