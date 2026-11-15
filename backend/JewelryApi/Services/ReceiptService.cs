@@ -16,7 +16,7 @@ public class ReceiptService(DbConnectionFactory db, SettingsService settings)
         using var conn = db.Create();
         var h = await conn.QueryFirstOrDefaultAsync<ReceiptHeader>(
             $@"SELECT o.order_id, o.order_date, o.status, o.total_amount, o.discount_amount, o.paid_amount,
-                      o.vat_percent, o.vat_amount, o.public_code,
+                      o.vat_percent, o.vat_amount, o.public_code, o.returned_amount,
                       c.first_name || ' ' || c.last_name AS customer_name,
                       c.phone AS customer_phone, c.email AS customer_email, c.address AS customer_address,
                       e.first_name || ' ' || e.last_name AS employee_name
@@ -52,7 +52,8 @@ public class ReceiptService(DbConnectionFactory db, SettingsService settings)
             VatAmount = h.VatAmount,
             TotalAmount = h.TotalAmount,
             PaidAmount = h.PaidAmount,
-            DueAmount = h.Status == "Cancelled" ? 0m : h.TotalAmount - h.PaidAmount,
+            ReturnedAmount = h.ReturnedAmount,
+            DueAmount = h.Status == "Cancelled" ? 0m : h.TotalAmount - h.ReturnedAmount - h.PaidAmount,
             CustomerName = h.CustomerName, CustomerPhone = h.CustomerPhone,
             CustomerEmail = h.CustomerEmail, CustomerAddress = h.CustomerAddress,
             EmployeeName = h.EmployeeName,

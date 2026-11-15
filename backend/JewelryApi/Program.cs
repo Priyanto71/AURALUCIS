@@ -61,9 +61,9 @@ app.UseExceptionHandler(a => a.Run(async ctx =>
     var ex = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
     var (status, msg) = ex switch
     {
-        OracleException o when o.Number is 20001 or 20002 or 20006 or 20007 or 20008 or 20009 or 20010 or 20011 or 20013 or 20014 or 20015 or 20016 or 20017 or 20018 or 20019 => (400, AppMessage(o)),
+        OracleException o when o.Number is 20001 or 20002 or 20006 or 20007 or 20008 or 20009 or 20010 or 20011 or 20013 or 20014 or 20015 or 20016 or 20017 or 20018 or 20019 or 20021 or 20022 or 20024 or 20025 or 20026 or 20027 or 20028 => (400, AppMessage(o)),
         OracleException o when o.Number == 20003          => (404, AppMessage(o)),
-        OracleException o when o.Number is 20004 or 20005 or 20012 => (409, AppMessage(o)),
+        OracleException o when o.Number is 20004 or 20005 or 20012 or 20020 => (409, AppMessage(o)),
         OracleException o when o.Number == 1403           => (404, "Record not found."),
         OracleException o when o.Number == 1              => (409, "Duplicate value (unique constraint)."),
         OracleException o when o.Number == 2292           => (409, "Cannot delete: this record is used elsewhere."),

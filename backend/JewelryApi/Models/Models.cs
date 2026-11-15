@@ -62,7 +62,7 @@ public class OrderSummary
     public string? CustomerName { get; set; } public string? EmployeeName { get; set; }
     public decimal OrderTotal { get; set; } public int ItemCount { get; set; }
     public decimal DiscountAmount { get; set; } public decimal PaidAmount { get; set; } public decimal DueAmount { get; set; }
-    public decimal VatAmount { get; set; }
+    public decimal VatAmount { get; set; } public decimal ReturnedAmount { get; set; }
 }
 
 public class OrderItemRow
@@ -106,6 +106,7 @@ public class ReceiptHeader
     public int OrderId { get; set; } public DateTime OrderDate { get; set; } public string Status { get; set; } = "";
     public decimal TotalAmount { get; set; } public decimal DiscountAmount { get; set; } public decimal PaidAmount { get; set; }
     public decimal VatPercent { get; set; } public decimal VatAmount { get; set; } public string? PublicCode { get; set; }
+    public decimal ReturnedAmount { get; set; }
     public string? CustomerEmail { get; set; }
     public string? CustomerName { get; set; } public string? CustomerPhone { get; set; } public string? CustomerAddress { get; set; }
     public string? EmployeeName { get; set; }
@@ -140,6 +141,7 @@ public class ReceiptDto
     public decimal SubTotal { get; set; } public decimal DiscountAmount { get; set; }
     public decimal VatPercent { get; set; } public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; } public decimal PaidAmount { get; set; } public decimal DueAmount { get; set; }
+    public decimal ReturnedAmount { get; set; }
     public string? CustomerName { get; set; } public string? CustomerPhone { get; set; }
     public string? CustomerEmail { get; set; } public string? CustomerAddress { get; set; }
     public string? EmployeeName { get; set; }
@@ -157,7 +159,7 @@ public class ReceiptDto
         {
             OrderId = 0, ReceiptNo = ReceiptNo, OrderDate = OrderDate, Status = Status,
             SubTotal = SubTotal, DiscountAmount = DiscountAmount, VatPercent = VatPercent, VatAmount = VatAmount,
-            TotalAmount = TotalAmount, PaidAmount = PaidAmount, DueAmount = DueAmount,
+            TotalAmount = TotalAmount, PaidAmount = PaidAmount, DueAmount = DueAmount, ReturnedAmount = ReturnedAmount,
             CustomerName = first,
             ShopName = ShopName, ShopTagline = ShopTagline, ShopAddress = ShopAddress, ShopPhone = ShopPhone,
             Items = Items.Select(i => new OrderItemRow { ProductName = i.ProductName, Quantity = i.Quantity, UnitPrice = i.UnitPrice, LineTotal = i.LineTotal }).ToList(),
@@ -173,3 +175,28 @@ public class MetalRate
     public string? SetByName { get; set; } public int ProductCount { get; set; }
 }
 public record RateRequest(string MetalType, string? Purity, decimal RatePerGram);
+
+// ---- Sales return, refund and exchange ----
+public record ReturnItemRequest(int ItemId, int Quantity);
+public record ReturnRequest(int OrderId, string Reason, List<ReturnItemRequest> Items, string RefundMethod);
+public record ExchangeRequest(int OrderId, string Reason, List<ReturnItemRequest> ReturnItems, List<SaleLine> NewItems, string? PaymentMethod, decimal? PaidAmount);
+
+public class ReturnRow
+{
+    public int ReturnId { get; set; } public int OrderId { get; set; } public DateTime ReturnDate { get; set; }
+    public string? CustomerName { get; set; } public string? EmployeeName { get; set; } public string Reason { get; set; } = "";
+    public decimal ItemsAmount { get; set; } public decimal CreditAmount { get; set; } public decimal RefundAmount { get; set; }
+    public string? RefundMethod { get; set; } public int? ExchangeOrderId { get; set; }
+}
+public class ReturnLine
+{
+    public int ItemId { get; set; } public int ProductId { get; set; } public string ProductName { get; set; } = "";
+    public int Quantity { get; set; } public int ReturnedQty { get; set; } public int RemainingQty { get; set; } public decimal UnitPrice { get; set; }
+}
+public class ReturnOrderInfo
+{
+    public int OrderId { get; set; } public string Status { get; set; } = ""; public DateTime OrderDate { get; set; }
+    public string? CustomerName { get; set; } public decimal TotalAmount { get; set; } public decimal DiscountAmount { get; set; }
+    public decimal VatPercent { get; set; } public decimal PaidAmount { get; set; } public decimal ReturnedAmount { get; set; }
+}
+public class ReturnSummary { public decimal CreditAmount { get; set; } public decimal RefundableAmount { get; set; } }

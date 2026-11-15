@@ -19,6 +19,8 @@ public static class ReceiptFormatter
         if (r.DiscountAmount > 0) extra += $"<tr><td colspan='3' style='text-align:right;padding:4px 8px'>Discount</td><td style='text-align:right;padding:4px 8px'>-{M(r.DiscountAmount)}</td></tr>";
         if (r.VatAmount > 0) extra += $"<tr><td colspan='3' style='text-align:right;padding:4px 8px'>VAT ({r.VatPercent:0.##}%)</td><td style='text-align:right;padding:4px 8px'>{M(r.VatAmount)}</td></tr>";
 
+        if (r.ReturnedAmount > 0) extra += $"<tr><td colspan='3' style='text-align:right;padding:4px 8px'>Returned items (credit)</td><td style='text-align:right;padding:4px 8px'>-{M(r.ReturnedAmount)}</td></tr>";
+
         return $@"<div style='font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#222'>
   <h2 style='letter-spacing:3px;color:#7a5c0e;margin-bottom:0'>{E(r.ShopName)}</h2>
   <p style='margin-top:2px;color:#777'><i>{E(r.ShopTagline)}</i></p>
