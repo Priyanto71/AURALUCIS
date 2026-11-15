@@ -25,3 +25,15 @@ Logins: admin / admin123 (Manager), staff / staff123 (Staff)
 6. Reports tab (Manager): choose dates, Export CSV.
 7. Key icon: change your own password. Setup tab: edit an employee, Disable the staff login, then try to log in as staff (blocked).
 8. Staff login: no Reports tab, no cancel, no product form.
+
+## Version 3 features to show
+1. Setup > Shop settings: set VAT to 5 and save. New sale: two products, discount 10 %, pay half by bKash. The totals box shows discount, VAT, total, paying now and due.
+2. The receipt opens: shows discount, VAT, payments and the QR code. Try Print, Download PDF, WhatsApp. E-mail and SMS work after they are set up in appsettings.json.
+3. Scan the QR code with a phone (same Wi-Fi, website link set to the computer's address): the public receipt page opens without login.
+4. Orders: "Take payment" for the due amount. The due becomes 0.
+5. Stock: restock with a cost price and supplier; then Stock adjustment (Damaged, remove 1) and see the ADJUSTMENT line in the history.
+6. Products: cost price and profit per piece (Manager only). Reports: gross profit, margin, VAT, discounts, dues, and the charts.
+7. Dashboard: line chart (30 days) and the two pie charts.
+8. Audit: every sale, price change, login and payment is listed with who did it.
+9. Backup: run scripts\backup_auralucis.bat and show the .dmp file; explain docs\BACKUP_RESTORE.md.
+10. Staff login: discount over 10 % is refused, no cost prices, no Reports or Audit.
