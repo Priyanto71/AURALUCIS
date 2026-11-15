@@ -11,6 +11,7 @@ export default function Setup({ user }) {
   return (
     <>
       <Msg msg={msg} />
+      {isManager && <ShopSettings flash={flash} />}
       <Categories isManager={isManager} flash={flash} />
       <Suppliers isManager={isManager} flash={flash} />
       <Employees isManager={isManager} flash={flash} />
@@ -172,6 +173,45 @@ function Employees({ isManager, flash }) {
           ))}
         </tbody>
       </table></div>
+    </div>
+  )
+}
+
+const SETTING_FIELDS = [
+  ['shop_name', 'Shop name'], ['shop_tagline', 'Tagline'], ['shop_address', 'Address'],
+  ['shop_phone', 'Phone'], ['vat_percent', 'VAT % (0 = no VAT)'], ['website_url', 'Website link (used in the receipt QR code)'],
+]
+
+// Shop name, address, phone, VAT % and the website link that the receipt QR code opens.
+function ShopSettings({ flash }) {
+  const [v, setV] = useState(null)
+
+  useEffect(() => { api.get('/api/settings').then(setV).catch((e) => flash('error', e.message)) }, [])
+
+  const save = async (e) => {
+    e.preventDefault()
+    try { await api.put('/api/settings', v); flash('ok', 'Shop settings saved. New sales use them straight away.') }
+    catch (err) { flash('error', err.message) }
+  }
+
+  if (!v) return null
+  return (
+    <div className="card">
+      <h2>Shop settings</h2>
+      <form className="grid" onSubmit={save}>
+        {SETTING_FIELDS.map(([key, label]) => (
+          <label key={key}>{label}
+            <input value={v[key] ?? ''} type={key === 'vat_percent' ? 'number' : 'text'} min="0" max="100" step="0.01"
+              onChange={(e) => setV({ ...v, [key]: e.target.value })} />
+          </label>
+        ))}
+        <button className="primary">Save settings</button>
+      </form>
+      <p className="hint">
+        The QR code on every receipt opens <b>{(v.website_url || '').replace(/\/$/, '')}/verify/&lt;code&gt;</b>.
+        For a phone on the same Wi-Fi, use your computer's address, for example http://192.168.1.20:5173
+        (localhost only works on this computer). Orders already sold keep the VAT they were sold with.
+      </p>
     </div>
   )
 }
