@@ -17,6 +17,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 - **Login with roles:** Manager (full access) and Staff (sell, view, manage customers). Change your own password; a Manager can reset passwords, edit employees and disable logins.
 - **Sales:** multi-product cart, discount (amount or percent, Staff limited to 10 %), shop VAT, payment method (Cash, Card, bKash, Nagad, Bank), part payment with a due balance, Pending orders that reserve stock.
 - **Receipt:** printable, **Download PDF**, **e-mail**, **SMS**, **WhatsApp**, and a **QR code** that opens a public read-only receipt page (no login, no personal data).
+- **Pricing by metal rate:** a product can be priced as weight x today's gold/silver rate per gram, with the making charge as a fixed amount or a percent. A Manager sets the daily rate (Rates tab) and every product priced by it is repriced at once; rate history is kept.
 - **Stock:** restock with cost price and supplier, **stock adjustment** (damaged, lost, found, correction), full stock history.
 - **Profit:** cost price per product (weighted average on restock), gross profit and margin in reports. Cost prices are visible to Managers only.
 - **Reports and charts:** dashboard with line chart (30 days) and pie charts (category, payment method); date-range report with profit, VAT, discounts, dues; CSV export everywhere.
@@ -37,7 +38,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 
 ```
 AURALUCIS/
-  database/            SQL scripts (run in numeric order, 01 to 08)
+  database/            SQL scripts (run in numeric order, 01 to 09)
   backend/JewelryApi/  ASP.NET Core Web API
   frontend/            React + Vite app
   scripts/             backup and restore scripts
@@ -46,7 +47,7 @@ AURALUCIS/
 
 ## Database design
 
-Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `shop_settings`, `audit_log`.
+Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `metal_rates`, `shop_settings`, `audit_log`.
 
 - Auto IDs with sequences and before-insert triggers (Oracle 10g has no auto-increment)
 - Views: `vw_product_catalog`, `vw_order_summary`
@@ -54,7 +55,7 @@ Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders
 - Constraints: no negative stock, positive quantities, valid order status and payment method, unique customer phone, employee email and username
 - Passwords are stored as PBKDF2 hashes, never as plain text
 
-Diagrams: [ER diagram](docs/ER_Diagram_Jewelry.png) | [Class diagram](docs/Class_Diagram_Jewelry.png) (these show the first design and do not yet include the newest tables)
+Diagrams: [ER diagram](docs/ER_Diagram_Jewelry.png) | [Class diagram](docs/Class_Diagram_Jewelry.png) (both show every table of the current design)
 
 ## Getting started
 
@@ -65,7 +66,7 @@ CREATE USER your_user IDENTIFIED BY your_password;
 GRANT CONNECT, RESOURCE, CREATE VIEW TO your_user;
 ALTER USER your_user QUOTA UNLIMITED ON USERS;
 ```
-Connect as that user and run the scripts in `database/` in order: `01` to `08`. Run each only once. Take a backup before each upgrade script.
+Connect as that user and run the scripts in `database/` in order: `01` to `09`. Run each only once. Take a backup before each upgrade script.
 
 Demo logins created by `06`: `admin` / `admin123` (Manager) and `staff` / `staff123` (Staff). Change them for real use.
 
@@ -108,6 +109,8 @@ The QR code opens `<website link>/verify/<random code>`. `localhost` only works 
 | GET | `/api/reports/sales?from=&to=` | Manager | sales and profit report |
 | GET | `/api/audit` | Manager | audit log |
 | GET, PUT | `/api/settings` | logged in, Manager | shop settings |
+| GET | `/api/rates` | logged in | today's metal rates |
+| GET, POST | `/api/rates/history`, `/api/rates` | Manager | rate history / set today's rate (reprices products) |
 | GET | `/api/products`, `/api/categories`, `/api/suppliers`, `/api/employees` | logged in | lists (cost price hidden from Staff) |
 | POST/PUT/DELETE | `/api/products`; POST `/api/categories`, `/api/suppliers` | Manager | manage master data |
 | POST, PUT | `/api/employees`, `/api/employees/{id}` | Manager | add / edit employee |
@@ -137,7 +140,7 @@ See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts
 - [x] Stock adjustment, cost price and profit report
 - [x] Audit log, charts, QR code, PDF, e-mail and SMS receipts
 - [x] Backup and restore guide
-- [ ] Daily metal-rate pricing
+- [x] Daily metal-rate pricing and making charge in percent
 - [ ] Sales return and exchange
 - [ ] Branch stock requests and approval
 - [ ] Product images

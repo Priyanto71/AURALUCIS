@@ -37,3 +37,9 @@ Logins: admin / admin123 (Manager), staff / staff123 (Staff)
 8. Audit: every sale, price change, login and payment is listed with who did it.
 9. Backup: run scripts\backup_auralucis.bat and show the .dmp file; explain docs\BACKUP_RESTORE.md.
 10. Staff login: discount over 10 % is refused, no cost prices, no Reports or Audit.
+
+## Metal-rate pricing to show
+1. Rates tab: set Gold 22K to 1200 per gram. Products: add a ring, 8.5 g, Pricing "By metal rate", making charge "A percent of the price" 10 %. The catalog shows unit price 10200 and making 1020 with small "rate" and "10%" tags.
+2. Change the rate to 1250 on the Rates tab. The ring's price updates at once (10625). Dashboard shows "Today's metal rates".
+3. Rate history lists both rates with who set them. The audit log shows SET_RATE.
+4. A sale made before the change keeps its old price on the receipt.
