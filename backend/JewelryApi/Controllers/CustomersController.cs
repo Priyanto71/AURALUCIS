@@ -13,7 +13,7 @@ public class CustomersController(DbConnectionFactory db) : ControllerBase
     // due_amount = what this customer still owes on Completed orders
     private const string ListSql =
         @"SELECT c.customer_id, c.first_name, c.last_name, c.phone, c.email, c.address,
-                 (SELECT NVL(SUM(o.total_amount - o.paid_amount), 0)
+                 (SELECT NVL(SUM(o.total_amount - o.returned_amount - o.paid_amount), 0)
                   FROM orders o
                   WHERE o.customer_id = c.customer_id AND o.status = 'Completed') AS due_amount
           FROM customers c";
@@ -67,7 +67,7 @@ public class CustomersController(DbConnectionFactory db) : ControllerBase
 
         // total spent counts Completed orders only
         var stats = await conn.QuerySingleAsync<CustomerStats>(
-            @"SELECT NVL(SUM(CASE WHEN status = 'Completed' THEN total_amount END), 0) AS total_spent,
+            @"SELECT NVL(SUM(CASE WHEN status = 'Completed' THEN total_amount - returned_amount END), 0) AS total_spent,
                      COUNT(*) AS order_count
               FROM orders WHERE customer_id = :id", new { id });
 
@@ -78,7 +78,8 @@ public class CustomersController(DbConnectionFactory db) : ControllerBase
                      o.total_amount AS order_total,
                      (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.order_id) AS item_count,
                      o.discount_amount, o.paid_amount,
-                     CASE WHEN o.status = 'Cancelled' THEN 0 ELSE o.total_amount - o.paid_amount END AS due_amount
+                     CASE WHEN o.status = 'Cancelled' THEN 0 ELSE o.total_amount - o.returned_amount - o.paid_amount END AS due_amount,
+                     o.returned_amount
               FROM orders o
               JOIN customers c ON c.customer_id = o.customer_id
               LEFT JOIN employees e ON e.employee_id = o.employee_id

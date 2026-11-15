@@ -30,7 +30,7 @@ public class OrdersController(DbConnectionFactory db, ReceiptService receipts, E
         using var conn = db.Create();
         var rows = await conn.QueryAsync<OrderSummary>(
             @"SELECT order_id, order_date, status, customer_name, employee_name, order_total, item_count,
-                     discount_amount, paid_amount, due_amount, vat_amount
+                     discount_amount, paid_amount, due_amount, vat_amount, returned_amount
               FROM vw_order_summary ORDER BY order_id DESC");
         return Ok(rows);
     }
@@ -156,8 +156,17 @@ public class OrdersController(DbConnectionFactory db, ReceiptService receipts, E
     [HttpPost("{id:int}/payments")]
     public async Task<IActionResult> AddPayment(int id, PaymentRequest req)
     {
+        if (req.Method == "Exchange")
+            return BadRequest(new { error = "Choose Cash, Card, bKash, Nagad or Bank." });
+
         var employeeId = User.GetEmployeeId();
         using var conn = db.Create();
+
+        // the due amount already takes returned items into account
+        var due = await conn.ExecuteScalarAsync<decimal?>("SELECT due_amount FROM vw_order_summary WHERE order_id = :id", new { id });
+        if (due is null) return NotFound(new { error = "Order not found." });
+        if (req.Amount > due) return BadRequest(new { error = "Payment is more than the amount due." });
+
         await conn.ExecuteAsync("pkg_jewelry.receive_payment",
             new { p_order_id = id, p_amount = req.Amount, p_method = req.Method, p_employee_id = employeeId, p_note = req.Note },
             commandType: CommandType.StoredProcedure);
@@ -183,6 +192,12 @@ public class OrdersController(DbConnectionFactory db, ReceiptService receipts, E
     public async Task<IActionResult> Cancel(int id)
     {
         using var conn = db.Create();
+
+        // cancel_order puts every piece back in stock, so it must not run after items were already returned
+        var returned = await conn.ExecuteScalarAsync<decimal?>("SELECT returned_amount FROM orders WHERE order_id = :id", new { id });
+        if (returned is null) return NotFound(new { error = "Order not found." });
+        if (returned > 0) return Conflict(new { error = "This order already has returned items, so it cannot be cancelled." });
+
         await conn.ExecuteAsync("pkg_jewelry.cancel_order", new { p_order_id = id }, commandType: CommandType.StoredProcedure);
 
         await AuditLogger.LogAsync(db, User.GetEmployeeId(), "CANCEL", "Order", id.ToString(), "Order cancelled, stock returned");
