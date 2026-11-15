@@ -44,6 +44,7 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
                 id, fn = e.FirstName, ln = e.LastName, role = e.Role, phone = e.Phone, email = e.Email,
                 username = e.Username.Trim(), hash = PasswordHasher.Hash(e.Password)
             });
+        await AuditLogger.LogAsync(db, User.GetEmployeeId(), "CREATE", "Employee", id.ToString(), $"{e.FirstName} {e.LastName} ({e.Role}), username {e.Username}");
         return Ok(new { employeeId = id });
     }
 
@@ -71,6 +72,9 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
         // the role is stored inside the login token, so make the person sign in again
         if (!string.Equals(current.Role, e.Role, StringComparison.OrdinalIgnoreCase))
             tokens.RevokeEmployee(id);
+
+        await AuditLogger.LogAsync(db, User.GetEmployeeId(), "UPDATE", "Employee", id.ToString(),
+            $"{e.FirstName} {e.LastName}: role {current.Role} -> {e.Role}");
         return NoContent();
     }
 
@@ -94,6 +98,8 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
             new { a = req.Active ? 1 : 0, id });
 
         if (!req.Active) tokens.RevokeEmployee(id);
+
+        await AuditLogger.LogAsync(db, myId, req.Active ? "ENABLE" : "DISABLE", "Employee", id.ToString(), $"{current.FirstName} {current.LastName}");
         return NoContent();
     }
 
@@ -112,6 +118,8 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
         if (n == 0) return NotFound(new { error = "Employee not found." });
 
         tokens.RevokeEmployee(id);
+
+        await AuditLogger.LogAsync(db, User.GetEmployeeId(), "PASSWORD_RESET", "Employee", id.ToString(), "Manager reset this password");
         return NoContent();
     }
 

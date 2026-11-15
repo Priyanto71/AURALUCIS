@@ -22,15 +22,23 @@ public class AuthController(DbConnectionFactory db, TokenStore tokens) : Control
               FROM employees WHERE LOWER(username) = LOWER(:u)", new { u = req.Username });
 
         if (emp?.PasswordHash is null || !PasswordHasher.Verify(req.Password, emp.PasswordHash))
+        {
+            await AuditLogger.LogAsync(db, emp?.EmployeeId, "LOGIN_FAILED", "Auth", emp?.EmployeeId.ToString(),
+                $"Wrong username or password for '{req.Username}'");
             return Unauthorized(new { error = "Wrong username or password." });
+        }
 
         if (emp.IsActive != 1)
+        {
+            await AuditLogger.LogAsync(db, emp.EmployeeId, "LOGIN_BLOCKED", "Auth", emp.EmployeeId.ToString(), "Disabled account tried to sign in");
             return Unauthorized(new { error = "This account is disabled. Ask a Manager." });
+        }
 
         // Only "Manager" gets manager rights; every other role is treated as Staff.
         var role = emp.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase) ? "Manager" : "Staff";
         var name = $"{emp.FirstName} {emp.LastName}";
         var token = tokens.Issue(new AuthUser(emp.EmployeeId, emp.Username ?? "", name, role, DateTime.UtcNow.AddHours(8)));
+        await AuditLogger.LogAsync(db, emp.EmployeeId, "LOGIN", "Auth", emp.EmployeeId.ToString(), $"{name} signed in as {role}");
         return Ok(new { token, employeeId = emp.EmployeeId, name, role });
     }
 
@@ -70,6 +78,7 @@ public class AuthController(DbConnectionFactory db, TokenStore tokens) : Control
         await conn.ExecuteAsync(
             "UPDATE employees SET password_hash = :h WHERE employee_id = :id",
             new { h = PasswordHasher.Hash(req.NewPassword), id });
+        await AuditLogger.LogAsync(db, id, "PASSWORD_CHANGE", "Employee", id.ToString(), "Changed own password");
         return NoContent();
     }
 }

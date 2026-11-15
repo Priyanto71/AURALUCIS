@@ -1,6 +1,7 @@
 using Dapper;
 using JewelryApi.Auth;
 using JewelryApi.Data;
+using JewelryApi.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
@@ -14,6 +15,10 @@ DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddSingleton<TokenStore>();
+builder.Services.AddSingleton<SettingsService>();
+builder.Services.AddSingleton<ReceiptService>();
+builder.Services.AddSingleton<EmailService>();
+builder.Services.AddSingleton<SmsService>();
 builder.Services.AddControllers();
 
 // Login: every endpoint needs a valid token unless marked [AllowAnonymous] (only /api/auth/login).
@@ -57,9 +62,9 @@ app.UseExceptionHandler(a => a.Run(async ctx =>
     var ex = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
     var (status, msg) = ex switch
     {
-        OracleException o when o.Number is 20001 or 20002 or 20006 => (400, AppMessage(o)),
+        OracleException o when o.Number is 20001 or 20002 or 20006 or 20007 or 20008 or 20009 or 20010 or 20011 or 20013 or 20014 or 20015 or 20016 => (400, AppMessage(o)),
         OracleException o when o.Number == 20003          => (404, AppMessage(o)),
-        OracleException o when o.Number is 20004 or 20005 => (409, AppMessage(o)),
+        OracleException o when o.Number is 20004 or 20005 or 20012 => (409, AppMessage(o)),
         OracleException o when o.Number == 1403           => (404, "Record not found."),
         OracleException o when o.Number == 1              => (409, "Duplicate value (unique constraint)."),
         OracleException o when o.Number == 2292           => (409, "Cannot delete: this record is used elsewhere."),
