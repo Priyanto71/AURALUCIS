@@ -28,7 +28,7 @@ Logins: admin / admin123 (Manager), staff / staff123 (Staff)
 
 ## Version 3 features to show
 1. Setup > Shop settings: set VAT to 5 and save. New sale: two products, discount 10 %, pay half by bKash. The totals box shows discount, VAT, total, paying now and due.
-2. The receipt opens: shows discount, VAT, payments and the QR code. Try Print, Download PDF, WhatsApp. E-mail and SMS work after they are set up in appsettings.json.
+2. The receipt opens: shows discount, VAT, payments and the QR code. Try Print, Download PDF and WhatsApp. E-mail works after it is set up in appsettings.json.
 3. Scan the QR code with a phone (same Wi-Fi, website link set to the computer's address): the public receipt page opens without login.
 4. Orders: "Take payment" for the due amount. The due becomes 0.
 5. Stock: restock with a cost price and supplier; then Stock adjustment (Damaged, remove 1) and see the ADJUSTMENT line in the history.

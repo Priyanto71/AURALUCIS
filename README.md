@@ -16,7 +16,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 
 - **Login with roles:** Manager (full access) and Staff (sell, view, manage customers). Change your own password; a Manager can reset passwords, edit employees and disable logins.
 - **Sales:** multi-product cart, discount (amount or percent, Staff limited to 10 %), shop VAT, payment method (Cash, Card, bKash, Nagad, Bank), part payment with a due balance, Pending orders that reserve stock.
-- **Receipt:** printable, **Download PDF**, **e-mail**, **SMS**, **WhatsApp**, and a **QR code** that opens a public read-only receipt page (no login, no personal data).
+- **Receipt:** printable, **Download PDF**, **e-mail**, **WhatsApp**, and a **QR code** that opens a public read-only receipt page (no login, no personal data).
 - **Pricing by metal rate:** a product can be priced as weight x today's gold/silver rate per gram, with the making charge as a fixed amount or a percent. A Manager sets the daily rate (Rates tab) and every product priced by it is repriced at once; rate history is kept.
 - **Stock:** restock with cost price and supplier, **stock adjustment** (damaged, lost, found, correction), full stock history.
 - **Profit:** cost price per product (weighted average on restock), gross profit and margin in reports. Cost prices are visible to Managers only.
@@ -75,7 +75,7 @@ Demo logins created by `06`: `admin` / `admin123` (Manager) and `staff` / `staff
 cd backend/JewelryApi
 copy appsettings.example.json appsettings.json
 ```
-Edit `appsettings.json`: the Oracle connection string, and (optional) the `Email` and `Sms` sections to send receipts. Then:
+Edit `appsettings.json`: the Oracle connection string, and (optional) the `Email` section to send receipts. Then:
 ```
 dotnet restore
 dotnet run
@@ -93,10 +93,9 @@ Open http://localhost:5173 and sign in. As Manager, open **Setup > Shop settings
 ### Receipt QR code
 The QR code opens `<website link>/verify/<random code>`. `localhost` only works on your own computer. To test with a phone on the same Wi-Fi, set the website link to your computer's address, for example `http://192.168.1.20:5173`. For a real shop, host the site online.
 
-### E-mail and SMS
+### E-mail
 - **E-mail:** fill `Email` in `appsettings.json` (SMTP host, port, user, password, from). Gmail needs an app password.
-- **SMS:** any HTTP SMS gateway: `Sms.UrlTemplate` such as `https://gateway.example/send?key={key}&to={to}&text={message}` and `Sms.ApiKey`.
-- Without these settings the buttons show a clear "not set up" message. WhatsApp and PDF need no setup.
+- Without these settings the E-mail button shows a clear "not set up" message. WhatsApp and PDF need no setup. See [docs/EMAIL_QR_SETUP.md](docs/EMAIL_QR_SETUP.md).
 
 ## API overview
 
@@ -120,7 +119,7 @@ The QR code opens `<website link>/verify/<random code>`. `localhost` only works 
 | GET | `/api/orders`, `/api/orders/{id}/items`, `/api/orders/{id}/receipt` | logged in | order list, lines, receipt data |
 | POST | `/api/orders/sale` | logged in | sale or Pending order with discount, VAT and payment, one transaction |
 | POST | `/api/orders/{id}/payments` | logged in | take a payment |
-| POST | `/api/orders/{id}/email`, `/api/orders/{id}/sms` | logged in | send the receipt |
+| POST | `/api/orders/{id}/email` | logged in | e-mail the receipt |
 | POST | `/api/orders/{id}/complete` | logged in | Pending to Completed |
 | POST | `/api/orders/{id}/cancel` | Manager | cancel and return stock |
 | POST | `/api/stock/restock`, `/api/stock/adjust` | Manager | add stock with cost / adjust stock |
@@ -138,7 +137,7 @@ See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts
 - [x] Receipts, search and filters, customer history
 - [x] Discount, VAT, payment methods, part payment and dues
 - [x] Stock adjustment, cost price and profit report
-- [x] Audit log, charts, QR code, PDF, e-mail and SMS receipts
+- [x] Audit log, charts, QR code, PDF and e-mail receipts
 - [x] Backup and restore guide
 - [x] Daily metal-rate pricing and making charge in percent
 - [ ] Sales return and exchange

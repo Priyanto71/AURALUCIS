@@ -7,7 +7,7 @@ Your data lives in the Oracle schema (for example `lucifer`). If the computer br
 | What | How | How often |
 |---|---|---|
 | The database (all tables, data, package, views) | `scripts\backup_auralucis.bat` (Oracle `exp`) | every day the shop is open, and before any upgrade script |
-| `backend\JewelryApi\appsettings.json` (connection string, e-mail, SMS settings) | copy the file to the backup folder | when it changes |
+| `backend\JewelryApi\appsettings.json` (connection string and e-mail settings) | copy the file to the backup folder | when it changes |
 | The code | already on GitHub | every commit |
 
 Copy the backup folder (`C:\AURALUCIS_BACKUP`) to a USB drive or cloud drive too. A backup on the same computer does not help if that computer is lost.

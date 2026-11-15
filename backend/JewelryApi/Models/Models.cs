@@ -132,7 +132,7 @@ public class SettingRow { public string SettingKey { get; set; } = ""; public st
 
 public record SendReceiptRequest(string? To);
 
-// The receipt, used by the receipt screen, the e-mail/SMS text and the public receipt page.
+// The receipt, used by the receipt screen, the e-mail and the public receipt page.
 public class ReceiptDto
 {
     public int OrderId { get; set; } public string ReceiptNo { get; set; } = ""; public DateTime OrderDate { get; set; }

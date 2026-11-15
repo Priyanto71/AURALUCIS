@@ -8,7 +8,7 @@ const digits = (s) => (s ?? '').replace(/\D/g, '')
 // Bangladesh numbers written as 01XXXXXXXXX need the country code 880 for WhatsApp
 const waNumber = (s) => { const d = digits(s); return d.startsWith('0') ? `88${d}` : d }
 
-// Printable receipt for one order: print, download as PDF, e-mail, SMS, WhatsApp. The QR code opens the public receipt page.
+// Printable receipt for one order: print, download as PDF, e-mail, WhatsApp. The QR code opens the public receipt page.
 export default function Receipt({ orderId, onClose }) {
   const [r, setR] = useState(null)
   const [msg, setMsg] = useState(null)
@@ -39,11 +39,16 @@ export default function Receipt({ orderId, onClose }) {
     finally { setBusy('') }
   }
 
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(r.publicUrl); setMsg({ type: 'ok', text: 'Link copied.' }) }
+    catch { setMsg({ type: 'error', text: 'Could not copy automatically. Select the link under the QR code.' }) }
+  }
+
   const send = async (kind) => {
     setBusy(kind); setMsg(null)
     try {
       await api.post(`/api/orders/${orderId}/${kind}`, { to: to.trim() || null })
-      setMsg({ type: 'ok', text: kind === 'email' ? 'Receipt e-mailed.' : 'Receipt SMS sent.' })
+      setMsg({ type: 'ok', text: 'Receipt e-mailed.' })
     } catch (e) { setMsg({ type: 'error', text: e.message }) }
     finally { setBusy('') }
   }
@@ -101,19 +106,20 @@ export default function Receipt({ orderId, onClose }) {
             <div className="r-qr">
               <QrCode text={r.publicUrl} size={96} />
               <p>Scan to check this receipt online</p>
+              <p className="r-link">{r.publicUrl}</p>
             </div>
             <p className="r-foot">Thank you for choosing {r.shopName}.</p>
           </div>
 
           <div className="send no-print">
-            <label>Send to (e-mail or phone; empty = the customer's)
+            <label>Send to (e-mail or WhatsApp number; empty = the customer's)
               <input value={to} onChange={(e) => setTo(e.target.value)} placeholder={r.customerEmail || r.customerPhone || 'name@example.com or 01XXXXXXXXX'} />
             </label>
             <div className="sendbtns">
               <button className="small" disabled={!!busy} onClick={() => send('email')}>{busy === 'email' ? 'Sending...' : 'E-mail'}</button>
-              <button className="small" disabled={!!busy} onClick={() => send('sms')}>{busy === 'sms' ? 'Sending...' : 'SMS'}</button>
               <a className="small linkbtn" target="_blank" rel="noreferrer"
                 href={`https://wa.me/${waNumber(to.includes('@') ? '' : (to || r.customerPhone))}?text=${encodeURIComponent(text)}`}>WhatsApp</a>
+              <button type="button" className="small" onClick={copyLink}>Copy link</button>
             </div>
           </div>
         </>

@@ -3,7 +3,7 @@ using JewelryApi.Models;
 
 namespace JewelryApi.Services;
 
-// Turns a receipt into the HTML e-mail and the short SMS text.
+// Turns a receipt into the HTML e-mail.
 public static class ReceiptFormatter
 {
     private static string M(decimal v) => v.ToString("0.00");
@@ -37,6 +37,4 @@ public static class ReceiptFormatter
 
     public static string Subject(ReceiptDto r) => $"{r.ShopName} receipt {r.ReceiptNo}";
 
-    public static string Sms(ReceiptDto r) =>
-        $"{r.ShopName} receipt {r.ReceiptNo}: total {M(r.TotalAmount)}, paid {M(r.PaidAmount)}, due {M(r.DueAmount)}. Check: {r.PublicUrl}";
 }

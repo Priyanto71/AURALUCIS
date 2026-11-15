@@ -634,9 +634,9 @@ status বদলে stock ফেরত দিই, কিন্তু ইতি�
 - লগইন করা কর্মচারী একই পেজে **Open this order in the system** বাটন পায়।
 - `localhost` ফোনে খোলে না। ডেমোতে ওয়েবসাইট লিংক হিসেবে কম্পিউটারের Wi-Fi ঠিকানা দিন। (Setup > Shop settings)
 
-### ১২.৬  PDF, ইমেইল, SMS, WhatsApp
+### ১২.৬  PDF, ইমেইল, WhatsApp
 - **PDF:** ব্রাউজারে রসিদের ছবি তুলে (html2canvas) jsPDF দিয়ে PDF বানায়।
-- **ইমেইল:** SMTP (appsettings.json > Email)। **SMS:** যেকোনো HTTP SMS gateway (appsettings.json > Sms)। সেটিং না থাকলে পরিষ্কার বার্তা আসে।
+- **ইমেইল:** SMTP (appsettings.json > Email)। সেটিং না থাকলে পরিষ্কার বার্তা আসে।
 - **WhatsApp:** `wa.me` লিংক, কোনো সেটআপ লাগে না।
 
 ### ১২.৭  চার্ট

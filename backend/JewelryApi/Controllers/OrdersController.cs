@@ -14,7 +14,7 @@ namespace JewelryApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrdersController(DbConnectionFactory db, ReceiptService receipts, EmailService email, SmsService sms) : ControllerBase
+public class OrdersController(DbConnectionFactory db, ReceiptService receipts, EmailService email) : ControllerBase
 {
     // Staff may give at most this discount (in %). A Manager may give any discount.
     private const decimal StaffMaxDiscountPct = 10m;
@@ -68,27 +68,6 @@ public class OrdersController(DbConnectionFactory db, ReceiptService receipts, E
         catch (SmtpException ex) { return StatusCode(502, new { error = "The mail server refused the message: " + ex.Message }); }
 
         await AuditLogger.LogAsync(db, User.GetEmployeeId(), "EMAIL", "Order", id.ToString(), $"Receipt sent to {to}");
-        return NoContent();
-    }
-
-    // Send the receipt as an SMS through the configured gateway (to = typed number, or the customer's phone).
-    [HttpPost("{id:int}/sms")]
-    public async Task<IActionResult> SmsReceipt(int id, SendReceiptRequest req)
-    {
-        var r = await receipts.GetByIdAsync(id);
-        if (r is null) return NotFound(new { error = "Order not found." });
-
-        var to = string.IsNullOrWhiteSpace(req.To) ? r.CustomerPhone : req.To.Trim();
-        if (string.IsNullOrWhiteSpace(to))
-            return BadRequest(new { error = "This customer has no phone number. Type one." });
-        if (!sms.IsConfigured)
-            return BadRequest(new { error = "SMS is not set up on the server (appsettings.json > Sms)." });
-
-        try { await sms.SendAsync(to, ReceiptFormatter.Sms(r)); }
-        catch (HttpRequestException ex) { return StatusCode(502, new { error = "The SMS gateway refused the message: " + ex.Message }); }
-        catch (TaskCanceledException) { return StatusCode(504, new { error = "The SMS gateway did not answer in time." }); }
-
-        await AuditLogger.LogAsync(db, User.GetEmployeeId(), "SMS", "Order", id.ToString(), $"Receipt sent to {to}");
         return NoContent();
     }
 

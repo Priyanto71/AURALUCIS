@@ -18,7 +18,6 @@ builder.Services.AddSingleton<TokenStore>();
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<ReceiptService>();
 builder.Services.AddSingleton<EmailService>();
-builder.Services.AddSingleton<SmsService>();
 builder.Services.AddControllers();
 
 // Login: every endpoint needs a valid token unless marked [AllowAnonymous] (only /api/auth/login).
