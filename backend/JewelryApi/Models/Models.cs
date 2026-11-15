@@ -17,6 +17,7 @@ public class Product
     public decimal WeightGrams { get; set; } public decimal MakingCharge { get; set; }
     public decimal UnitPrice { get; set; } public int StockQuantity { get; set; }
     public decimal CostPrice { get; set; }
+    public string PricingMode { get; set; } = "FIXED"; public decimal? MakingPercent { get; set; }
 }
 
 // Row shape of view VW_PRODUCT_CATALOG (joined names + stock value)
@@ -28,6 +29,7 @@ public class ProductCatalogItem
     public decimal WeightGrams { get; set; } public decimal MakingCharge { get; set; }
     public decimal UnitPrice { get; set; } public int StockQuantity { get; set; }
     public decimal StockValue { get; set; } public decimal CostPrice { get; set; }
+    public string PricingMode { get; set; } = "FIXED"; public decimal? MakingPercent { get; set; }
 }
 
 public class Customer
@@ -164,20 +166,10 @@ public class ReceiptDto
     }
 }
 
-// ---- Metal rates ----
 public class MetalRate
 {
-    public int RateId { get; set; }
-    public string MetalType { get; set; } = "";
-    public string? Purity { get; set; }
-    public decimal RatePerGram { get; set; }
-    public DateTime EffectiveFrom { get; set; }
-    public string? SetByName { get; set; }
-    public int ProductCount { get; set; }
+    public int RateId { get; set; } public string MetalType { get; set; } = ""; public string? Purity { get; set; }
+    public decimal RatePerGram { get; set; } public DateTime EffectiveFrom { get; set; }
+    public string? SetByName { get; set; } public int ProductCount { get; set; }
 }
-
-public record RateRequest(
-    string MetalType,
-    string? Purity,
-    decimal RatePerGram
-);
+public record RateRequest(string MetalType, string? Purity, decimal RatePerGram);
