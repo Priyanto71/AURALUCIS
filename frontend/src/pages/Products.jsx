@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, money, downloadCsv } from '../api.js'
 import Msg from './Messages.jsx'
 
-const empty = { productName: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, unitPrice: '', stockQuantity: 0 }
+const empty = { productName: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, unitPrice: '', costPrice: 0, stockQuantity: 0 }
 
 export default function Products({ user }) {
   const isManager = user.role === 'Manager'
@@ -44,7 +44,7 @@ export default function Products({ user }) {
       setForm({
         productName: p.productName, categoryId: p.categoryId ?? '', supplierId: p.supplierId ?? '',
         metalType: p.metalType, purity: p.purity ?? '', weightGrams: p.weightGrams,
-        makingCharge: p.makingCharge, unitPrice: p.unitPrice, stockQuantity: p.stockQuantity,
+        makingCharge: p.makingCharge, unitPrice: p.unitPrice, costPrice: p.costPrice, stockQuantity: p.stockQuantity,
       })
       setEditingId(id)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -62,6 +62,7 @@ export default function Products({ user }) {
       weightGrams: Number(form.weightGrams),
       makingCharge: Number(form.makingCharge),
       unitPrice: Number(form.unitPrice),
+      costPrice: Number(form.costPrice) || 0,
       stockQuantity: Number(form.stockQuantity),
     }
     try {
@@ -79,8 +80,8 @@ export default function Products({ user }) {
   }
 
   const exportCsv = () => downloadCsv('products.csv',
-    ['ID', 'Name', 'Category', 'Supplier', 'Metal', 'Purity', 'Weight (g)', 'Unit price', 'Making charge', 'Stock', 'Stock value'],
-    shown.map((p) => [p.productId, p.productName, p.categoryName, p.supplierName, p.metalType, p.purity, p.weightGrams, p.unitPrice, p.makingCharge, p.stockQuantity, p.stockValue]))
+    ['ID', 'Name', 'Category', 'Supplier', 'Metal', 'Purity', 'Weight (g)', 'Unit price', 'Making charge', ...(isManager ? ['Cost price'] : []), 'Stock', 'Stock value'],
+    shown.map((p) => [p.productId, p.productName, p.categoryName, p.supplierName, p.metalType, p.purity, p.weightGrams, p.unitPrice, p.makingCharge, ...(isManager ? [p.costPrice] : []), p.stockQuantity, p.stockValue]))
 
   return (
     <>
@@ -107,6 +108,7 @@ export default function Products({ user }) {
             <label>Weight (g)<input required type="number" step="0.001" value={form.weightGrams} onChange={set('weightGrams')} /></label>
             <label>Making charge<input type="number" step="0.01" value={form.makingCharge} onChange={set('makingCharge')} /></label>
             <label>Unit price<input required type="number" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} /></label>
+            <label>Cost price (what you paid)<input type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} /></label>
             <label>{editingId ? 'Stock (use Stock tab)' : 'Opening stock'}
               <input type="number" min="0" disabled={!!editingId} value={form.stockQuantity} onChange={set('stockQuantity')} />
             </label>
@@ -143,7 +145,7 @@ export default function Products({ user }) {
         </div>
 
         <div className="tablewrap"><table>
-          <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Supplier</th><th>Metal</th><th className="right">Weight</th><th className="right">Unit price</th><th className="right">Making</th><th className="right">Stock</th><th className="right">Stock value</th>{isManager && <th></th>}</tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Supplier</th><th>Metal</th><th className="right">Weight</th><th className="right">Unit price</th><th className="right">Making</th>{isManager && <th className="right">Cost</th>}{isManager && <th className="right">Profit / pc</th>}<th className="right">Stock</th><th className="right">Stock value</th>{isManager && <th></th>}</tr></thead>
           <tbody>
             {shown.map((p) => (
               <tr key={p.productId}>
@@ -152,6 +154,8 @@ export default function Products({ user }) {
                 <td className="right">{p.weightGrams} g</td>
                 <td className="right">{money(p.unitPrice)}</td>
                 <td className="right">{money(p.makingCharge)}</td>
+                {isManager && <td className="right">{p.costPrice > 0 ? money(p.costPrice) : <span className="hint">not set</span>}</td>}
+                {isManager && <td className="right">{p.costPrice > 0 ? money(Number(p.unitPrice) + Number(p.makingCharge) - Number(p.costPrice)) : ''}</td>}
                 <td className="right">{p.stockQuantity}</td>
                 <td className="right">{money(p.stockValue)}</td>
                 {isManager && (
@@ -162,7 +166,7 @@ export default function Products({ user }) {
                 )}
               </tr>
             ))}
-            {shown.length === 0 && <tr><td colSpan="11" className="hint">No products match.</td></tr>}
+            {shown.length === 0 && <tr><td colSpan="13" className="hint">No products match.</td></tr>}
           </tbody>
         </table></div>
       </div>

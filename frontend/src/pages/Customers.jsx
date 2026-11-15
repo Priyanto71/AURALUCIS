@@ -14,6 +14,7 @@ export default function Customers() {
   const [msg, setMsg] = useState(null)
   const [history, setHistory] = useState(null) // purchase history shown in a pop-up
   const [receiptId, setReceiptId] = useState(null)
+  const [dueOnly, setDueOnly] = useState(false)
 
   const load = async () => {
     try { setRows(await api.get('/api/customers')) }
@@ -22,7 +23,9 @@ export default function Customers() {
   useEffect(() => { load() }, [])
 
   const shown = rows.filter((c) =>
-    `${c.firstName} ${c.lastName} ${c.phone ?? ''} ${c.email ?? ''} ${c.address ?? ''}`.toLowerCase().includes(search.toLowerCase()))
+    `${c.firstName} ${c.lastName} ${c.phone ?? ''} ${c.email ?? ''} ${c.address ?? ''}`.toLowerCase().includes(search.toLowerCase())
+    && (!dueOnly || c.dueAmount > 0))
+  const totalDue = rows.reduce((sum, c) => sum + Number(c.dueAmount || 0), 0)
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -48,8 +51,8 @@ export default function Customers() {
     catch (e) { setMsg({ type: 'error', text: e.message }) }
   }
 
-  const exportCsv = () => downloadCsv('customers.csv', ['ID', 'First name', 'Last name', 'Phone', 'Email', 'Address'],
-    shown.map((c) => [c.customerId, c.firstName, c.lastName, c.phone, c.email, c.address]))
+  const exportCsv = () => downloadCsv('customers.csv', ['ID', 'First name', 'Last name', 'Phone', 'Email', 'Address', 'Due'],
+    shown.map((c) => [c.customerId, c.firstName, c.lastName, c.phone, c.email, c.address, c.dueAmount]))
 
   return (
     <>
@@ -76,20 +79,23 @@ export default function Customers() {
         </div>
         <div className="row">
           <label className="grow">Search<input placeholder="Name, mobile, email, address..." value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+          <label className="checkline"><input type="checkbox" checked={dueOnly} onChange={(e) => setDueOnly(e.target.checked)} /> Has due</label>
         </div>
+        {totalDue > 0 && <p className="hint">Total owed by customers: <b>{money(totalDue)}</b></p>}
         <div className="tablewrap"><table>
           <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th></th></tr></thead>
           <tbody>
             {shown.map((c) => (
               <tr key={c.customerId}>
                 <td>{c.customerId}</td><td>{c.firstName} {c.lastName}</td><td>{c.phone}</td><td>{c.email}</td><td>{c.address}</td>
+                <td className={`right ${c.dueAmount > 0 ? 'dueamt' : ''}`}>{money(c.dueAmount)}</td>
                 <td className="actions">
                   <button className="small" onClick={() => openHistory(c.customerId)}>History</button>
                   <button className="small" onClick={() => startEdit(c)}>Edit</button>
                 </td>
               </tr>
             ))}
-            {shown.length === 0 && <tr><td colSpan="6" className="hint">No customers match.</td></tr>}
+            {shown.length === 0 && <tr><td colSpan="8" className="hint">No customers match.</td></tr>}
           </tbody>
         </table></div>
       </div>
@@ -101,20 +107,22 @@ export default function Customers() {
           <div className="stats">
             <div className="stat"><span>Total spent (completed)</span><b>{money(history.totalSpent)}</b></div>
             <div className="stat"><span>Orders</span><b>{history.orderCount}</b></div>
+            <div className="stat"><span>Due (unpaid)</span><b>{money(history.dueAmount)}</b></div>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <div className="tablewrap"><table>
-              <thead><tr><th>#</th><th>Date</th><th>Status</th><th>Served by</th><th className="right">Items</th><th className="right">Total</th><th></th></tr></thead>
+              <thead><tr><th>#</th><th>Date</th><th>Status</th><th>Served by</th><th className="right">Items</th><th className="right">Total</th><th className="right">Due</th><th></th></tr></thead>
               <tbody>
                 {history.orders.map((o) => (
                   <tr key={o.orderId}>
                     <td>{o.orderId}</td><td>{new Date(o.orderDate).toLocaleDateString()}</td>
                     <td><span className={`badge ${o.status}`}>{o.status}</span></td>
                     <td>{o.employeeName}</td><td className="right">{o.itemCount}</td><td className="right">{money(o.orderTotal)}</td>
+                    <td className={`right ${o.dueAmount > 0 ? 'dueamt' : ''}`}>{money(o.dueAmount)}</td>
                     <td><button className="small" onClick={() => setReceiptId(o.orderId)}>Receipt</button></td>
                   </tr>
                 ))}
-                {history.orders.length === 0 && <tr><td colSpan="7" className="hint">No orders yet.</td></tr>}
+                {history.orders.length === 0 && <tr><td colSpan="8" className="hint">No orders yet.</td></tr>}
               </tbody>
             </table></div>
           </div>
