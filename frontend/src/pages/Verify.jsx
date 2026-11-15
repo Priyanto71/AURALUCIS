@@ -53,6 +53,7 @@ export default function Verify({ code }) {
             </div>
             <div className="r-total"><span>TOTAL</span><b>{money(r.totalAmount)}</b></div>
             <div className="r-sums">
+              {r.returnedAmount > 0 && <div><span>Returned items (credit)</span><b>-{money(r.returnedAmount)}</b></div>}
               <div><span>Paid</span><b>{money(r.paidAmount)}</b></div>
               {r.dueAmount > 0 && <div className="r-due"><span>DUE</span><b>{money(r.dueAmount)}</b></div>}
             </div>

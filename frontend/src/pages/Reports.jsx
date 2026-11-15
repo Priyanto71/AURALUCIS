@@ -96,8 +96,10 @@ export default function Reports() {
             <div className="stat"><span>Orders</span><b>{s.orderCount}</b></div>
             <div className="stat"><span>Items sold</span><b>{s.itemsSold}</b></div>
             <div className="stat"><span>Average order</span><b>{money(s.averageOrder)}</b></div>
+            <div className="stat"><span>Returns processed</span><b>{money(s.returnedCredit)}</b></div>
+            <div className="stat"><span>Refunded in cash/card</span><b>{money(s.refundedAmount)}</b></div>
           </div>
-          <p className="hint">Profit = price of the items sold - their cost price - discounts. VAT is not counted as income.</p>
+          <p className="hint">Sales, profit and dues are net of returned items (a return reduces the sale it came from). Profit = price of the items kept - their cost price - discounts. VAT is not counted as income. "Returns processed" are returns made in this period (credit value, incl. exchanges).</p>
 
           <div className="card">
             <div className="cardhead">

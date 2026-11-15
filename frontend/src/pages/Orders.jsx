@@ -68,9 +68,9 @@ export default function Orders({ user, initialQuery }) {
   const clearFilters = () => { setStatus('All'); setQ(''); setFrom(''); setTo(''); setDueOnly(false) }
 
   const exportCsv = () => downloadCsv('orders.csv',
-    ['Order', 'Date', 'Customer', 'Staff', 'Status', 'Items', 'Discount', 'VAT', 'Total', 'Paid', 'Due'],
+    ['Order', 'Date', 'Customer', 'Staff', 'Status', 'Items', 'Discount', 'VAT', 'Total', 'Returned', 'Paid', 'Due'],
     shown.map((o) => [o.orderId, new Date(o.orderDate).toLocaleDateString(), o.customerName, o.employeeName, o.status,
-      o.itemCount, o.discountAmount, o.vatAmount, o.orderTotal, o.paidAmount, o.dueAmount]))
+      o.itemCount, o.discountAmount, o.vatAmount, o.orderTotal, o.returnedAmount, o.paidAmount, o.dueAmount]))
 
   return (
     <>
@@ -106,7 +106,7 @@ export default function Orders({ user, initialQuery }) {
                     <td>{o.customerName}</td><td>{o.employeeName}</td>
                     <td><span className={`badge ${o.status}`}>{o.status}</span></td>
                     <td className="right">{o.itemCount}</td>
-                    <td className="right">{money(o.orderTotal)}</td>
+                    <td className="right">{money(o.orderTotal)}{o.returnedAmount > 0 && <> <span className="badge" title="Value of returned items">returned {money(o.returnedAmount)}</span></>}</td>
                     <td className="right">{money(o.paidAmount)}</td>
                     <td className={`right ${o.dueAmount > 0 ? 'dueamt' : ''}`}>{money(o.dueAmount)}</td>
                     <td className="actions">
@@ -114,7 +114,7 @@ export default function Orders({ user, initialQuery }) {
                       <button className="small" onClick={() => setReceiptId(o.orderId)}>Receipt</button>
                       {o.dueAmount > 0 && <button className="small" onClick={() => startPay(o)}>Take payment</button>}
                       {o.status === 'Pending' && <button className="small" onClick={() => complete(o.orderId)}>Complete</button>}
-                      {isManager && o.status !== 'Cancelled' && <button className="small danger" onClick={() => cancel(o)}>Cancel</button>}
+                      {isManager && o.status !== 'Cancelled' && !(o.returnedAmount > 0) && <button className="small danger" onClick={() => cancel(o)}>Cancel</button>}
                     </td>
                   </tr>
                   {open === o.orderId && items.map((i) => (
