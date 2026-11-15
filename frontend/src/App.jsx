@@ -10,17 +10,18 @@ import Stock from './pages/Stock.jsx'
 import Reports from './pages/Reports.jsx'
 import Audit from './pages/Audit.jsx'
 import Rates from './pages/Rates.jsx'
+import Returns from './pages/Returns.jsx'
 import Setup from './pages/Setup.jsx'
 import ChangePassword from './components/ChangePassword.jsx'
 
 const TABS = {
-  Dashboard, Products, Customers, 'New sale': NewSale, Orders, Stock, Rates, Reports, Audit, Setup,
+  Dashboard, Products, Customers, 'New sale': NewSale, Orders, Returns, Stock, Rates, Reports, Audit, Setup,
 }
 const ICONS = {
-  Dashboard: '📊', Products: '💎', Customers: '👤', 'New sale': '🛒', Orders: '🧾', Stock: '📦', Rates: '💰', Reports: '📈', Audit: '🕵️', Setup: '⚙️',
+  Dashboard: '📊', Products: '💎', Customers: '👤', 'New sale': '🛒', Orders: '🧾', Returns: '↩️', Stock: '📦', Rates: '💰', Reports: '📈', Audit: '🕵️', Setup: '⚙️',
 }
 const THEME_KEY = 'auralucis_theme'
-const MANAGER_ONLY = ['Rates', 'Reports', 'Audit']
+const MANAGER_ONLY = ['Returns', 'Rates', 'Reports', 'Audit']
 
 // the public QR page can send a logged-in employee straight to an order
 function readGoto() {
