@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, money, downloadCsv } from '../api.js'
 import Msg from './Messages.jsx'
 
-const empty = { productName: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, unitPrice: '', costPrice: 0, stockQuantity: 0 }
+const empty = { productName: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, makingType: 'FIXED', makingPercent: '', pricingMode: 'FIXED', unitPrice: '', costPrice: 0, stockQuantity: 0 }
 
 export default function Products({ user }) {
   const isManager = user.role === 'Manager'
@@ -44,7 +44,8 @@ export default function Products({ user }) {
       setForm({
         productName: p.productName, categoryId: p.categoryId ?? '', supplierId: p.supplierId ?? '',
         metalType: p.metalType, purity: p.purity ?? '', weightGrams: p.weightGrams,
-        makingCharge: p.makingCharge, unitPrice: p.unitPrice, costPrice: p.costPrice, stockQuantity: p.stockQuantity,
+        makingCharge: p.makingCharge, makingType: p.makingPercent != null ? 'PERCENT' : 'FIXED', makingPercent: p.makingPercent ?? '',
+        pricingMode: p.pricingMode, unitPrice: p.unitPrice, costPrice: p.costPrice, stockQuantity: p.stockQuantity,
       })
       setEditingId(id)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -55,13 +56,17 @@ export default function Products({ user }) {
 
   const save = async (e) => {
     e.preventDefault()
+    const rate = form.pricingMode === 'RATE'
+    const pct = form.makingType === 'PERCENT'
     const body = {
       ...form,
+      pricingMode: form.pricingMode,
+      makingPercent: pct ? Number(form.makingPercent) || 0 : null,
       categoryId: form.categoryId ? Number(form.categoryId) : null,
       supplierId: form.supplierId ? Number(form.supplierId) : null,
       weightGrams: Number(form.weightGrams),
-      makingCharge: Number(form.makingCharge),
-      unitPrice: Number(form.unitPrice),
+      makingCharge: pct ? 0 : Number(form.makingCharge),
+      unitPrice: rate ? 0 : Number(form.unitPrice),
       costPrice: Number(form.costPrice) || 0,
       stockQuantity: Number(form.stockQuantity),
     }
@@ -106,8 +111,24 @@ export default function Products({ user }) {
             <label>Metal<input required value={form.metalType} onChange={set('metalType')} /></label>
             <label>Purity<input value={form.purity} onChange={set('purity')} placeholder="22K" /></label>
             <label>Weight (g)<input required type="number" step="0.001" value={form.weightGrams} onChange={set('weightGrams')} /></label>
-            <label>Making charge<input type="number" step="0.01" value={form.makingCharge} onChange={set('makingCharge')} /></label>
-            <label>Unit price<input required type="number" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} /></label>
+            <label>Pricing
+              <select value={form.pricingMode} onChange={set('pricingMode')}>
+                <option value="FIXED">Fixed price (type it)</option>
+                <option value="RATE">By metal rate (weight x today's rate)</option>
+              </select>
+            </label>
+            {form.pricingMode === 'FIXED'
+              ? <label>Unit price<input required type="number" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} /></label>
+              : <label>Unit price<input disabled value="from the rate (Rates tab)" readOnly /></label>}
+            <label>Making charge is
+              <select value={form.makingType} onChange={set('makingType')}>
+                <option value="FIXED">A fixed amount</option>
+                <option value="PERCENT">A percent of the price</option>
+              </select>
+            </label>
+            {form.makingType === 'FIXED'
+              ? <label>Making charge<input type="number" min="0" step="0.01" value={form.makingCharge} onChange={set('makingCharge')} /></label>
+              : <label>Making charge %<input required type="number" min="0" max="100" step="0.01" value={form.makingPercent} onChange={set('makingPercent')} /></label>}
             <label>Cost price (what you paid)<input type="number" min="0" step="0.01" value={form.costPrice} onChange={set('costPrice')} /></label>
             <label>{editingId ? 'Stock (use Stock tab)' : 'Opening stock'}
               <input type="number" min="0" disabled={!!editingId} value={form.stockQuantity} onChange={set('stockQuantity')} />
@@ -152,8 +173,8 @@ export default function Products({ user }) {
                 <td>{p.productId}</td><td>{p.productName}</td><td>{p.categoryName}</td><td>{p.supplierName}</td>
                 <td>{p.metalType} {p.purity}</td>
                 <td className="right">{p.weightGrams} g</td>
-                <td className="right">{money(p.unitPrice)}</td>
-                <td className="right">{money(p.makingCharge)}</td>
+                <td className="right">{money(p.unitPrice)} {p.pricingMode === 'RATE' && <span className="badge" title="Priced from today's metal rate">rate</span>}</td>
+                <td className="right">{money(p.makingCharge)} {p.makingPercent != null && <span className="badge" title="Making charge in percent">{Number(p.makingPercent)}%</span>}</td>
                 {isManager && <td className="right">{p.costPrice > 0 ? money(p.costPrice) : <span className="hint">not set</span>}</td>}
                 {isManager && <td className="right">{p.costPrice > 0 ? money(Number(p.unitPrice) + Number(p.makingCharge) - Number(p.costPrice)) : ''}</td>}
                 <td className="right">{p.stockQuantity}</td>

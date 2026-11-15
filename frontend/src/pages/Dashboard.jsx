@@ -19,10 +19,12 @@ function last30(rows) {
 
 export default function Dashboard() {
   const [d, setD] = useState(null)
+  const [rates, setRates] = useState([])
   const [msg, setMsg] = useState(null)
 
   useEffect(() => {
     api.get('/api/reports/dashboard').then(setD).catch((e) => setMsg({ type: 'error', text: e.message }))
+    api.get('/api/rates').then(setRates).catch(() => {})
   }, [])
 
   if (!d) return <Msg msg={msg} />
@@ -40,6 +42,20 @@ export default function Dashboard() {
         <div className="stat"><span>Products</span><b>{s.productCount}</b></div>
         <div className="stat"><span>Stock value</span><b>{money(s.stockValue)}</b></div>
       </div>
+
+      {rates.length > 0 && (
+        <div className="card">
+          <h2>Today's metal rates <span className="hint">(per gram)</span></h2>
+          <div className="ratechips">
+            {rates.map((r) => (
+              <div key={r.rateId} className="ratechip">
+                <span>{r.metalType} {r.purity}</span><b>{money(r.ratePerGram)}</b>
+                <em>{new Date(r.effectiveFrom).toLocaleDateString()}</em>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h2>Sales, last 30 days</h2>

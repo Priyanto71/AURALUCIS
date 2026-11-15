@@ -215,6 +215,13 @@ td.wrap { white-space: normal; min-width: 260px; }
 a.linkbtn { text-decoration: none; display: inline-block; line-height: 1.2; }
 @media print { .send { display: none !important; } }
 
+/* ---------- metal rates ---------- */
+.ratechips { display: flex; flex-wrap: wrap; gap: 10px; }
+.ratechip { background: var(--ink); border: 1px solid var(--gold); border-radius: 10px; padding: 10px 14px; color: #e6d7a8; display: flex; flex-direction: column; min-width: 130px; }
+.ratechip span { font-size: 12px; color: #b8a77a; }
+.ratechip b { font-size: 20px; color: #d9b45a; }
+.ratechip em { font-size: 11px; color: #8d836a; font-style: normal; }
+
 /* ---------- tablets and phones ---------- */
 @media (max-width: 860px) {
   .shell { flex-direction: column; }
