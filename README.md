@@ -19,6 +19,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 - **Receipt:** printable, **Download PDF**, **e-mail**, **WhatsApp**, and a **QR code** that opens a public read-only receipt page (no login, no personal data).
 - **Pricing by metal rate:** a product can be priced as weight x today's gold/silver rate per gram, with the making charge as a fixed amount or a percent. A Manager sets the daily rate (Rates tab) and every product priced by it is repriced at once; rate history is kept.
 - **Returns and exchanges (Manager):** return items from a completed order and refund the money (Cash, Card, bKash, Nagad, Bank), or exchange them for other items. The value includes the order's discount share and VAT; stock goes back; sales, profit and dues are shown net of returns.
+- **Supplier purchases (Manager):** record what was bought from a supplier (invoice, items, cost), stock and each product's average cost update automatically, and the system tracks what you still owe and the payments to the supplier.
 - **Stock:** restock with cost price and supplier, **stock adjustment** (damaged, lost, found, correction), full stock history.
 - **Profit:** cost price per product (weighted average on restock), gross profit and margin in reports. Cost prices are visible to Managers only.
 - **Reports and charts:** dashboard with line chart (30 days) and pie charts (category, payment method); date-range report with profit, VAT, discounts, dues; CSV export everywhere.
@@ -39,7 +40,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 
 ```
 AURALUCIS/
-  database/            SQL scripts (run in numeric order, 01 to 10)
+  database/            SQL scripts (run in numeric order, 01 to 11)
   backend/JewelryApi/  ASP.NET Core Web API
   frontend/            React + Vite app
   scripts/             backup and restore scripts
@@ -48,11 +49,11 @@ AURALUCIS/
 
 ## Database design
 
-Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `order_returns`, `order_return_items`, `metal_rates`, `shop_settings`, `audit_log`.
+Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `order_returns`, `order_return_items`, `purchases`, `purchase_items`, `purchase_payments`, `metal_rates`, `shop_settings`, `audit_log`.
 
 - Auto IDs with sequences and before-insert triggers (Oracle 10g has no auto-increment)
 - Views: `vw_product_catalog`, `vw_order_summary`
-- Package `pkg_jewelry`: `create_order`, `add_order_item`, `finalize_order`, `add_payment`, `receive_payment`, `record_sale`, `restock_product`, `adjust_stock`, `complete_order`, `cancel_order`; package `pkg_returns`: `start_return`, `return_item`, `finish_return`, `settle_return`
+- Package `pkg_jewelry`: `create_order`, `add_order_item`, `finalize_order`, `add_payment`, `receive_payment`, `record_sale`, `restock_product`, `adjust_stock`, `complete_order`, `cancel_order`; package `pkg_returns`: `start_return`, `return_item`, `finish_return`, `settle_return`; package `pkg_purchases`: `start_purchase`, `add_purchase_item`, `pay_supplier`
 - Constraints: no negative stock, positive quantities, valid order status and payment method, unique customer phone, employee email and username
 - Passwords are stored as PBKDF2 hashes, never as plain text
 
@@ -67,7 +68,7 @@ CREATE USER your_user IDENTIFIED BY your_password;
 GRANT CONNECT, RESOURCE, CREATE VIEW TO your_user;
 ALTER USER your_user QUOTA UNLIMITED ON USERS;
 ```
-Connect as that user and run the scripts in `database/` in order: `01` to `10`. Run each only once. Take a backup before each upgrade script.
+Connect as that user and run the scripts in `database/` in order: `01` to `11`. Run each only once. Take a backup before each upgrade script.
 
 Demo logins created by `06`: `admin` / `admin123` (Manager) and `staff` / `staff123` (Staff). Change them for real use.
 
@@ -123,10 +124,18 @@ The QR code opens `<website link>/verify/<random code>`. `localhost` only works 
 | POST | `/api/orders/{id}/email` | logged in | e-mail the receipt |
 | POST | `/api/orders/{id}/complete` | logged in | Pending to Completed |
 | POST | `/api/orders/{id}/cancel` | Manager | cancel and return stock (not allowed after items were returned) |
+| GET, POST | `/api/purchases`, `/api/purchases/{id}`, `/api/purchases/{id}/payments` | Manager | supplier purchases: list, details, record a purchase, pay the supplier |
 | GET | `/api/returns`, `/api/returns/order/{id}` | Manager | return history / what can still be returned from an order |
 | POST | `/api/returns`, `/api/returns/exchange` | Manager | return and refund / return and exchange in one transaction |
 | POST | `/api/stock/restock`, `/api/stock/adjust` | Manager | add stock with cost / adjust stock |
 | GET | `/api/stock/transactions` | logged in | stock history |
+
+## Fresh install in one step
+See [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md): create an empty Oracle user, then run `scripts\fresh_install.bat`. It installs scripts 01 to 11 and checks them.
+
+## Checking the installation
+- `database/check_install.sql`: run in SQL*Plus. It lists any missing table, column or package, and any object that failed to compile.
+- `scripts/smoke_test.ps1`: with the API running, `powershell -ExecutionPolicy Bypass -File scripts\smoke_test.ps1` checks logins, roles, every list, the public receipt and prints PASS or FAIL. Add `-Full` to also make a test sale, payment, return and stock adjustment.
 
 ## Backup and restore
 See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts/`.
@@ -144,5 +153,6 @@ See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts
 - [x] Backup and restore guide
 - [x] Daily metal-rate pricing and making charge in percent
 - [x] Sales return, refund and exchange
+- [x] Supplier purchase records and supplier payments
 - [ ] Branch stock requests and approval
 - [ ] Product images

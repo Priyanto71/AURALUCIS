@@ -207,6 +207,7 @@ td.wrap { white-space: normal; min-width: 260px; }
 .r-qr { text-align: center; margin-top: 12px; }
 .r-qr img { display: block; margin: 0 auto; }
 .r-qr p { margin: 4px 0 0; font-size: 11px; color: #555; }
+.r-link { word-break: break-all; font-size: 9px !important; color: #777 !important; margin-top: 2px !important; }
 .r-verified { text-align: center; color: #27500a; font-weight: 600; margin: 4px 0 8px; }
 .verify-card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--gold); border-radius: 14px; padding: 16px; }
 

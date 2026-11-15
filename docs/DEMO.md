@@ -51,3 +51,11 @@ Logins: admin / admin123 (Manager), staff / staff123 (Staff)
 4. Dashboard and Reports: sales are lower by the returned value. Receipt of the order shows "Returned items (credit)".
 5. Exchange: Returns, find another order, return a piece, choose "Exchange for other items", add the new product. The credit pays part of the new order; the customer pays the difference. A new receipt opens with "Credit from returned items" as a payment.
 6. Audit tab: RETURN and EXCHANGE lines with who and why. Staff login: no Returns tab.
+
+## Supplier purchases to show (Manager)
+1. Setup: make sure a supplier exists. Purchases tab: choose the supplier, invoice number INV-1, add a ring (qty 2, cost 3800) and a necklace (qty 1, cost 11400).
+2. Pay 10000 now by bKash. The box shows total 19000, paying now 10000, still owed 9000. Save.
+3. The list shows the purchase with 9000 owed; the top cards show "Owed to suppliers".
+4. Stock tab: RESTOCK lines "Purchase #1" with the unit cost and the supplier. Products tab: the cost price of the ring is now the weighted average of old stock and the new purchase.
+5. Pay supplier: pay the remaining 9000 by Cash. Owed becomes 0.
+6. Audit: PURCHASE and SUPPLIER_PAYMENT lines.

@@ -200,3 +200,26 @@ public class ReturnOrderInfo
     public decimal VatPercent { get; set; } public decimal PaidAmount { get; set; } public decimal ReturnedAmount { get; set; }
 }
 public class ReturnSummary { public decimal CreditAmount { get; set; } public decimal RefundableAmount { get; set; } }
+
+// ---- Supplier purchases ----
+public record PurchaseLineRequest(int ProductId, int Quantity, decimal UnitCost);
+public record PurchaseRequest(int SupplierId, string? InvoiceNo, string? Note, List<PurchaseLineRequest> Items, decimal? PaidAmount, string? PaymentMethod);
+public record SupplierPaymentRequest(decimal Amount, string Method, string? Note);
+
+public class PurchaseRow
+{
+    public int PurchaseId { get; set; } public DateTime PurchaseDate { get; set; } public string? InvoiceNo { get; set; }
+    public int SupplierId { get; set; } public string SupplierName { get; set; } = ""; public string? EmployeeName { get; set; }
+    public decimal TotalAmount { get; set; } public decimal PaidAmount { get; set; } public decimal DueAmount { get; set; }
+    public int ItemCount { get; set; } public string? Note { get; set; }
+}
+public class PurchaseItemRow
+{
+    public int ProductId { get; set; } public string ProductName { get; set; } = ""; public int Quantity { get; set; }
+    public decimal UnitCost { get; set; } public decimal LineTotal { get; set; }
+}
+public class PurchasePaymentRow
+{
+    public decimal Amount { get; set; } public string Method { get; set; } = ""; public DateTime PaidAt { get; set; }
+    public string? EmployeeName { get; set; } public string? Note { get; set; }
+}
