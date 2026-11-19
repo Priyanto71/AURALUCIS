@@ -3,159 +3,183 @@
 </p>
 
 <h1 align="center">AURALUCIS</h1>
-<p align="center"><b>Jewelry Shop &amp; Stock Management System</b></p>
-<p align="center"><i>"Where Luxury Meets Precision."</i></p>
+<p align="center"><strong>Jewelry Shop &amp; Stock Management System</strong></p>
+<p align="center"><em>Where Luxury Meets Precision.</em></p>
 
 ---
 
-## About
+## Overview
 
-AURALUCIS manages the daily work of a jewelry shop: products and categories, suppliers, customers, employees, multi-product sales with discount and VAT, payments in parts, pending orders, receipts with a QR code, stock history and adjustment, cost and profit reports, charts, and an audit log. The business rules (stock check, row locking, discount limits, VAT, payments, cost averaging) live in an Oracle PL/SQL package, so every sale is one safe transaction.
+AURALUCIS is a jewelry shop management application built around an Oracle database, an ASP.NET Core Web API, and a React frontend. It brings product cataloguing, inventory, sales, customer records, supplier purchases, returns, buybacks, repair/service jobs, reporting, and audit tracking into one system.
+
+Core inventory and transaction rules are implemented in Oracle PL/SQL packages and database constraints, with the API providing authenticated application access and the frontend providing the shop interface.
 
 ## Features
 
-- **Login with roles:** Manager (full access) and Staff (sell, view, manage customers). Change your own password; a Manager can reset passwords, edit employees and disable logins.
-- **Sales:** multi-product cart, discount (amount or percent, Staff limited to 10 %), shop VAT, payment method (Cash, Card, bKash, Nagad, Bank), part payment with a due balance, Pending orders that reserve stock.
-- **Receipt:** printable, **Download PDF**, **e-mail**, **WhatsApp**, and a **QR code** that opens a public read-only receipt page (no login, no personal data).
-- **Pricing by metal rate:** a product can be priced as weight x today's gold/silver rate per gram, with the making charge as a fixed amount or a percent. A Manager sets the daily rate (Rates tab) and every product priced by it is repriced at once; rate history is kept.
-- **Returns and exchanges (Manager):** return items from a completed order and refund the money (Cash, Card, bKash, Nagad, Bank), or exchange them for other items. The value includes the order's discount share and VAT; stock goes back; sales, profit and dues are shown net of returns.
-- **Supplier purchases (Manager):** record what was bought from a supplier (invoice, items, cost), stock and each product's average cost update automatically, and the system tracks what you still owe and the payments to the supplier.
-- **Stock:** restock with cost price and supplier, **stock adjustment** (damaged, lost, found, correction), full stock history.
-- **Profit:** cost price per product (weighted average on restock), gross profit and margin in reports. Cost prices are visible to Managers only.
-- **Reports and charts:** dashboard with line chart (30 days) and pie charts (category, payment method); date-range report with profit, VAT, discounts, dues; CSV export everywhere.
-- **Audit log:** who did what and when (logins, sales, payments, price changes, employee changes, settings). Manager only.
-- **Shop settings:** shop name, address, phone, VAT %, website link used in the QR code.
-- Search and filters, customer purchase history and dues, light and dark mode, phone friendly layout.
-- **Backup and restore** guide with ready-made scripts.
+- **Role-based accounts:** Owner, Manager, and Staff roles; first Owner account is provisioned through the backend bootstrap command. Manager and Owner permissions are enforced on protected management operations.
+- **Products and catalog:** product categories, suppliers, SKU/barcode and hallmark/certificate details, metal and purity information, weight, pricing mode, cost, stock, descriptions, product images, and publication controls for the public catalogue.
+- **Sales and orders:** multi-item sales, discounts, VAT, pending orders, partial payments, outstanding balances, and order completion/cancellation.
+- **Receipts:** printable receipt data, PDF, email support, and a public receipt verification page using a random code.
+- **Metal-rate pricing:** gold/silver rate history and products priced using weight, metal rate, and making-charge settings.
+- **Inventory:** restocking, stock adjustments, stock transaction history, supplier-linked stock movements, and weighted-average product cost tracking.
+- **Returns and exchanges:** item-level returns, refund/credit calculations, and exchange orders.
+- **Supplier purchases:** purchase invoices, purchase items, supplier payments, and purchase balances.
+- **Old-gold buybacks and exchanges:** records customer metal details, weights, valuation, settlement method, and optional linked exchange order.
+- **Repair and service jobs:** customer job intake, job number, description, due date, status, charges, delivery tracking, and payments.
+- **Public product catalogue:** public read-only product listing and detail endpoints for published products; Owner/Manager-controlled product publication and image upload.
+- **Reports and audit:** dashboard and sales reporting, audit history, and shop settings.
+- **Account recovery:** forgot-password and reset-password API flow, plus password change and employee password reset operations.
 
-## Tech stack
+## Technology stack
 
 | Layer | Technology |
 |---|---|
-| Database | Oracle Database 10g XE (tables, sequences, triggers, views, PL/SQL package) |
-| Backend | ASP.NET Core Web API, Dapper, Oracle.ManagedDataAccess.Core, token login, Swagger |
-| Frontend | React 18 + Vite (qrcode, html2canvas, jsPDF) |
+| Database | Oracle Database 10g XE; SQL tables, sequences, triggers, views, constraints, and PL/SQL packages |
+| Backend | ASP.NET Core Web API, C#, Dapper, Oracle Managed Data Access |
+| Frontend | React 18, Vite, JavaScript |
+| Product images | Cloudinary integration |
+| Supporting libraries | QR code, html2canvas, jsPDF |
+
+## Architecture and database diagrams
+
+The diagrams below describe the current version 13 schema and the backend's main application components.
+
+### Entity-Relationship Diagram
+
+![AURALUCIS Entity Relationship Diagram](docs/ER_Diagram_Jewelry.png)
+
+### Class / Component Diagram
+
+![AURALUCIS Class and Component Diagram](docs/Class_Diagram_Jewelry.png)
 
 ## Project structure
 
-```
+```text
 AURALUCIS/
-  database/            SQL scripts (fresh install: migrations 01 to 13)
-  backend/JewelryApi/  ASP.NET Core Web API
-  frontend/            React + Vite app
-  scripts/             backup and restore scripts
-  docs/                ER diagram, class diagram, guides, logo
+├── database/             Oracle installation and upgrade SQL scripts
+├── backend/
+│   └── JewelryApi/       ASP.NET Core Web API
+├── frontend/             React + Vite application
+├── docs/                 Setup guides, diagrams, and project assets
+└── scripts/              Utility and test scripts (where included)
 ```
 
 ## Database design
 
-Tables: `categories`, `suppliers`, `products`, `customers`, `employees`, `orders`, `order_items`, `stock_transactions`, `order_payments`, `order_returns`, `order_return_items`, `purchases`, `purchase_items`, `purchase_payments`, `metal_rates`, `shop_settings`, `audit_log`.
+The version 13 database includes these main entities:
 
-- Auto IDs with sequences and before-insert triggers (Oracle 10g has no auto-increment)
-- Views: `vw_product_catalog`, `vw_order_summary`
-- Package `pkg_jewelry`: `create_order`, `add_order_item`, `finalize_order`, `add_payment`, `receive_payment`, `record_sale`, `restock_product`, `adjust_stock`, `complete_order`, `cancel_order`; package `pkg_returns`: `start_return`, `return_item`, `finish_return`, `settle_return`; package `pkg_purchases`: `start_purchase`, `add_purchase_item`, `pay_supplier`
-- Constraints: no negative stock, positive quantities, valid order status and payment method, unique customer phone, employee email and username
-- Passwords are stored as PBKDF2 hashes, never as plain text
+- **Core shop:** `categories`, `suppliers`, `products`, `customers`, `employees`
+- **Sales and inventory:** `orders`, `order_items`, `order_payments`, `stock_transactions`
+- **Shop configuration and tracking:** `shop_settings`, `audit_log`, `metal_rates`
+- **Returns and purchasing:** `order_returns`, `order_return_items`, `purchases`, `purchase_items`, `purchase_payments`
+- **Newer workflows:** `old_gold_transactions`, `service_jobs`, `service_job_payments`
 
-Diagrams: [ER diagram](docs/ER_Diagram_Jewelry.png) | [Class diagram](docs/Class_Diagram_Jewelry.png) (both show every table of the current design)
+Products also contain catalogue, image, SKU/barcode, hallmark, and certificate fields. Employee records include account, password-reset, activation, and password-change fields.
+
+Important database packages include `pkg_jewelry`, `pkg_returns`, and `pkg_purchases`. The schema uses primary keys, foreign keys, unique constraints, check constraints, sequences, and triggers to protect data integrity.
 
 ## Getting started
 
-### 1. Database
+> This project uses Oracle Database 10g XE. Use a dedicated development schema and back up any existing database before applying an upgrade.
 
-For a fresh installation, follow [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md). It explains how to prepare an empty Oracle schema and run `database/install_all.sql` (migrations 1 to 13).
+### 1. Prepare the database
 
-For an existing database, do not run the full installer. Back up first and follow the applicable upgrade instructions in the documentation.
-### 2. Backend
+For a **fresh installation in an empty Oracle schema**, follow [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md). The installer `database/install_all.sql` runs the installation scripts through version 13 and then runs the installation checks.
+
+For an **existing AURALUCIS database**, do not run the full fresh installer. Back up the database and follow the applicable migration instructions. In particular, `database/upgrade_13.sql` is for an existing version 12 database and must only be run once.
+
+### 2. Configure and run the backend
+
+Open PowerShell in the project root:
+
+```powershell
+Copy-Item .\backend\JewelryApi\appsettings.example.json .\backend\JewelryApi\appsettings.json
 ```
-cd backend/JewelryApi
-copy appsettings.example.json appsettings.json
-```
-Edit `appsettings.json`: the Oracle connection string, and (optional) the `Email` section to send receipts. Then:
-```
+
+Edit the local `backend/JewelryApi/appsettings.json` with your Oracle connection string. Configure email and Cloudinary settings only if those features are needed. The real local settings file is excluded from Git; never commit database passwords, API secrets, SMTP credentials, or tokens.
+
+Then run:
+
+```powershell
+cd .\backend\JewelryApi
 dotnet restore
 dotnet run
 ```
-Open http://localhost:5000/swagger. Call `POST /api/Auth/login`, copy the token, click **Authorize** and paste it.
 
-### 3. Frontend
+The API listens locally at `http://localhost:5000`; Swagger is available at `http://localhost:5000/swagger`.
+
+### 3. Create the first Owner account
+
+With the backend stopped, run the bootstrap command from the repository root:
+
+```powershell
+dotnet run --project .\backend\JewelryApi -- --bootstrap-owner
 ```
-cd frontend
+
+Follow the interactive prompts to create the first Owner account. The bootstrap process refuses to create another Owner if one already exists. See [docs/OWNER_CATALOG_SETUP.md](docs/OWNER_CATALOG_SETUP.md) for details.
+
+### 4. Run the frontend
+
+Open a second PowerShell terminal:
+
+```powershell
+cd .\frontend
 npm install
 npm run dev
 ```
-Open http://localhost:5173 and sign in. As Manager, open **Setup > Shop settings** and set the VAT % and the website link.
 
-### Receipt QR code
-The QR code opens `<website link>/verify/<random code>`. `localhost` only works on your own computer. To test with a phone on the same Wi-Fi, set the website link to your computer's address, for example `http://192.168.1.20:5173`. For a real shop, host the site online.
+Open `http://localhost:5173` in your browser and sign in with the account you created.
 
-### E-mail
-- **E-mail:** fill `Email` in `appsettings.json` (SMTP host, port, user, password, from). Gmail needs an app password.
-- Without these settings the E-mail button shows a clear "not set up" message. WhatsApp and PDF need no setup. See [docs/EMAIL_QR_SETUP.md](docs/EMAIL_QR_SETUP.md).
+## Configuration notes
+
+- **Oracle:** set the local connection string in `appsettings.json`.
+- **Email:** configure SMTP settings to enable password recovery and email receipts.
+- **Cloudinary:** configure the Cloudinary cloud name, API key, and API secret for product image uploads. Keep credentials out of source control.
+- **Public catalogue:** only products marked as published are exposed by the public catalogue endpoints.
+- **Receipt verification:** public receipt verification uses the random receipt code; do not place customer or payment secrets in public links.
+
+More details:
+- [Fresh installation](docs/FRESH_INSTALL.md)
+- [Owner, roles, public catalogue, Cloudinary, and password recovery](docs/OWNER_CATALOG_SETUP.md)
+- [Email and QR setup](docs/EMAIL_QR_SETUP.md)
+- [Backup and restore](docs/BACKUP_RESTORE.md)
+- [User guide](docs/GUIDE.md)
+- [Demo guide](docs/DEMO.md)
 
 ## API overview
 
-| Method | URL | Who | Purpose |
-|---|---|---|---|
-| POST | `/api/auth/login` | everyone | get a token |
-| POST | `/api/auth/logout`, GET `/api/auth/me`, POST `/api/auth/change-password` | logged in | sign out, current user, change own password |
-| GET | `/api/public/receipt/{code}` | everyone | public receipt (QR page, safe copy) |
-| GET | `/api/reports/dashboard` | logged in | dashboard numbers and charts |
-| GET | `/api/reports/sales?from=&to=` | Manager | sales and profit report |
-| GET | `/api/audit` | Manager | audit log |
-| GET, PUT | `/api/settings` | logged in, Manager | shop settings |
-| GET | `/api/rates` | logged in | today's metal rates |
-| GET, POST | `/api/rates/history`, `/api/rates` | Manager | rate history / set today's rate (reprices products) |
-| GET | `/api/products`, `/api/categories`, `/api/suppliers`, `/api/employees` | logged in | lists (cost price hidden from Staff) |
-| POST/PUT/DELETE | `/api/products`; POST `/api/categories`, `/api/suppliers` | Manager | manage master data |
-| POST, PUT | `/api/employees`, `/api/employees/{id}` | Manager | add / edit employee |
-| POST | `/api/employees/{id}/active`, `/api/employees/{id}/reset-password` | Manager | disable or enable login / reset password |
-| GET/POST/PUT | `/api/customers` | logged in | customers with due balance |
-| GET | `/api/customers/{id}/history` | logged in | purchase history and totals |
-| GET | `/api/orders`, `/api/orders/{id}/items`, `/api/orders/{id}/receipt` | logged in | order list, lines, receipt data |
-| POST | `/api/orders/sale` | logged in | sale or Pending order with discount, VAT and payment, one transaction |
-| POST | `/api/orders/{id}/payments` | logged in | take a payment |
-| POST | `/api/orders/{id}/email` | logged in | e-mail the receipt |
-| POST | `/api/orders/{id}/complete` | logged in | Pending to Completed |
-| POST | `/api/orders/{id}/cancel` | Manager | cancel and return stock (not allowed after items were returned) |
-| GET, POST | `/api/purchases`, `/api/purchases/{id}`, `/api/purchases/{id}/payments` | Manager | supplier purchases: list, details, record a purchase, pay the supplier |
-| GET | `/api/returns`, `/api/returns/order/{id}` | Manager | return history / what can still be returned from an order |
-| POST | `/api/returns`, `/api/returns/exchange` | Manager | return and refund / return and exchange in one transaction |
-| POST | `/api/stock/restock`, `/api/stock/adjust` | Manager | add stock with cost / adjust stock |
-| GET | `/api/stock/transactions` | logged in | stock history |
+The API is organized around the following controller routes. Authorization is applied by the controllers/actions; the table is a feature overview, not a replacement for endpoint-level permission checks.
 
-## Fresh install
+| Area | Route base | Main operations |
+|---|---|---|
+| Authentication | `/api/auth` | Login, forgot/reset password, logout, current user, change password |
+| Employees | `/api/employees` | Employee management, activation, password reset, username update |
+| Products | `/api/products` | Product listing, details, create, update, delete |
+| Categories / suppliers | `/api/categories`, `/api/suppliers` | Listing and management |
+| Customers | `/api/customers` | Customer records and purchase history |
+| Orders | `/api/orders` | Orders, items, receipt, sale, email, payments, complete, cancel |
+| Returns | `/api/returns` | Return history, order return eligibility, returns and exchanges |
+| Purchases | `/api/purchases` | Purchase listing/details, purchase creation, supplier payments |
+| Stock | `/api/stock` | Restock, stock adjustment, transaction history |
+| Rates | `/api/rates` | Current metal rates, rate history, rate updates |
+| Buybacks | `/api/buybacks` | Old-gold buyback and exchange records |
+| Service jobs | `/api/servicejobs` | Job intake, status, charge, and payment operations |
+| Public catalogue | `/api/catalog` | Public catalogue listing/details; protected image upload |
+| Public receipts | `/api/public/receipt` | Public receipt verification by code |
+| Reports / audit | `/api/reports`, `/api/audit` | Dashboard, sales reports, audit history |
+| Settings | `/api/settings` | Shop settings |
 
-See [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md) for the complete fresh-install procedure, including Oracle setup, migrations 1 to 13, backend configuration and first Owner account creation.
+## Installation checks
 
-For Owner setup, public catalogue configuration, Cloudinary and password recovery, see [docs/OWNER_CATALOG_SETUP.md](docs/OWNER_CATALOG_SETUP.md).
-## Checking the installation
-- `database/check_install.sql`: run in SQL*Plus. It lists any missing table, column or package, and any object that failed to compile.
-- `scripts/smoke_test.ps1`: with the API running, `powershell -ExecutionPolicy Bypass -File scripts\smoke_test.ps1` checks logins, roles, every list, the public receipt and prints PASS or FAIL. Add `-Full` to also make a test sale, payment, return and stock adjustment.
-
-## Backup and restore
-See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts/`.
+Run `database/check_install.sql` in SQL*Plus after installation or migration. It checks required database objects and compilation status. Follow the installation guide for the expected successful result.
 
 ## Roadmap
 
-- [x] Database schema, views and business package
-- [x] REST API and React frontend
-- [x] Login, roles, password change, employee management
-- [x] Multiple products per sale, Pending orders
-- [x] Receipts, search and filters, customer history
-- [x] Discount, VAT, payment methods, part payment and dues
-- [x] Stock adjustment, cost price and profit report
-- [x] Audit log, charts, QR code, PDF and e-mail receipts
-- [x] Backup and restore guide
-- [x] Daily metal-rate pricing and making charge in percent
-- [x] Sales return, refund and exchange
-- [x] Supplier purchase records and supplier payments
-- [ ] Branch stock requests and approval
-- [ ] Product images
+The feature set is evolving. Confirmed implemented areas include the core sales and inventory workflows, returns, supplier purchases, metal-rate pricing, buybacks, service jobs, public catalogue, account recovery, and Owner account provisioning. Remaining work should be tracked against the current application and database source rather than assumed from an older checklist.
 
+## Security and data
 
-## Owner, Public Catalogue and Version 13 update
-
-See [Owner and Public Catalogue Setup](docs/OWNER_CATALOG_SETUP.md) for Owner account setup, Cloudinary configuration, password recovery, role permissions and public product catalogue setup.
-
-A fresh installation runs migrations 1 to 13 through `database/install_all.sql`. For an existing database, never run the full installer. Back up first and apply only the unapplied migrations. `database/upgrade_13.sql` upgrades an existing version 12 database to version 13; it must be run only once.
+- Keep the GitHub repository private until you have reviewed all files for secrets and real business data.
+- Never commit `appsettings.json`, `.env` files, database exports, backups, access tokens, SMTP passwords, or Cloudinary secrets.
+- Use sample data only when sharing screenshots or demonstrations.
+- A successful local build does not by itself mean the application has undergone a full production security or regression review.
