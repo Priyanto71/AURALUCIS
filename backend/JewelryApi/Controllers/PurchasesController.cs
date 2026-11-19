@@ -11,7 +11,7 @@ namespace JewelryApi.Controllers;
 // What was bought from which supplier, at what cost, and what is still owed. Managers only.
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Manager")]
+[Authorize(Roles = "Manager,Owner")]
 public class PurchasesController(DbConnectionFactory db) : ControllerBase
 {
     private static readonly string[] Methods = { "Cash", "Card", "bKash", "Nagad", "Bank" };
@@ -99,10 +99,10 @@ public class PurchasesController(DbConnectionFactory db) : ControllerBase
                     new { p_purchase_id = id, p_amount = paid, p_method = method, p_employee_id = employeeId, p_note = "Payment at purchase" },
                     tx, commandType: CommandType.StoredProcedure);
             }
-            tx.Commit();
-
-            await AuditLogger.LogAsync(db, employeeId, "PURCHASE", "Purchase", id.ToString(),
+            await AuditLogger.LogAsync(conn, tx, employeeId, "PURCHASE", "Purchase", id.ToString(),
                 $"Supplier #{req.SupplierId}, invoice {req.InvoiceNo}, {req.Items.Count} line(s), total {total}, paid {paid}, owed {total - paid}");
+
+            tx.Commit();
             return Ok(new { purchaseId = id, total, paid, due = total - paid });
         }
         catch
@@ -127,6 +127,10 @@ public class PurchasesController(DbConnectionFactory db) : ControllerBase
             await conn.ExecuteAsync("pkg_purchases.pay_supplier",
                 new { p_purchase_id = id, p_amount = req.Amount, p_method = req.Method, p_employee_id = employeeId, p_note = req.Note },
                 tx, commandType: CommandType.StoredProcedure);
+
+            await AuditLogger.LogAsync(conn, tx, employeeId, "SUPPLIER_PAYMENT", "Purchase", id.ToString(),
+                $"{req.Amount} by {req.Method}");
+
             tx.Commit();
         }
         catch
@@ -135,7 +139,6 @@ public class PurchasesController(DbConnectionFactory db) : ControllerBase
             throw;
         }
 
-        await AuditLogger.LogAsync(db, employeeId, "SUPPLIER_PAYMENT", "Purchase", id.ToString(), $"{req.Amount} by {req.Method}");
         return NoContent();
     }
 }

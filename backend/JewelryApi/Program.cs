@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using JewelryApi.Auth;
 using JewelryApi.Data;
 using JewelryApi.Services;
@@ -8,7 +8,21 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.OpenApi.Models;
 using Oracle.ManagedDataAccess.Client;
 
-var builder = WebApplication.CreateBuilder(args);
+var bootstrapOwner = args.Any(a =>
+    string.Equals(a, "--bootstrap-owner", StringComparison.OrdinalIgnoreCase));
+
+var webArgs = args
+    .Where(a => !string.Equals(a, "--bootstrap-owner", StringComparison.OrdinalIgnoreCase))
+    .ToArray();
+
+var builder = WebApplication.CreateBuilder(webArgs);
+
+if (bootstrapOwner)
+{
+    var connectionString = builder.Configuration.GetConnectionString("Oracle");
+    Environment.ExitCode = await OwnerBootstrapper.RunAsync(connectionString ?? string.Empty);
+    return;
+}
 
 // Oracle columns look like PRODUCT_NAME; this lets Dapper fill a C# property called ProductName.
 DefaultTypeMap.MatchNamesWithUnderscores = true;
@@ -18,6 +32,8 @@ builder.Services.AddSingleton<TokenStore>();
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<ReceiptService>();
 builder.Services.AddSingleton<EmailService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddControllers();
 
 // Login: every endpoint needs a valid token unless marked [AllowAnonymous] (only /api/auth/login).
@@ -78,6 +94,33 @@ app.UseExceptionHandler(a => a.Run(async ctx =>
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
+
+// Employees using temporary passwords must change them before accessing the API.
+app.Use(async (context, next) =>
+{
+    var mustChange = context.User.FindFirst("must_change_password")?.Value == "true";
+    var isApiRequest = context.Request.Path.StartsWithSegments("/api");
+
+    var isAllowedEndpoint =
+        context.Request.Path.Equals("/api/auth/change-password", StringComparison.OrdinalIgnoreCase) ||
+        context.Request.Path.Equals("/api/auth/logout", StringComparison.OrdinalIgnoreCase);
+
+    if (context.User.Identity?.IsAuthenticated == true &&
+        mustChange &&
+        isApiRequest &&
+        !isAllowedEndpoint)
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "You must change your password before using the system."
+        });
+        return;
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 app.MapControllers();
 app.Urls.Add("http://localhost:5000");

@@ -31,7 +31,7 @@ public class RatesController(DbConnectionFactory db) : ControllerBase
 
     // The latest 100 rates ever set (history).
     [HttpGet("history")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> History()
     {
         using var conn = db.Create();
@@ -47,7 +47,7 @@ public class RatesController(DbConnectionFactory db) : ControllerBase
 
     // Manager only: set today's rate. Every product that is priced by rate is repriced at once.
     [HttpPost]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Set(RateRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.MetalType)) return BadRequest(new { error = "The metal is required." });

@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import Msg from './Messages.jsx'
+import QrCode from '../components/QrCode.jsx'
 
 // Master data: categories, suppliers and employees (only a Manager can add).
 export default function Setup({ user }) {
-  const isManager = user.role === 'Manager'
+  const isManager = ['Manager', 'Owner'].includes(user.role)
+  const isOwner = user.role === 'Owner'
   const [msg, setMsg] = useState(null)
   const flash = (type, text) => setMsg({ type, text })
 
   return (
     <>
       <Msg msg={msg} />
-      {isManager && <ShopSettings flash={flash} />}
+      {isManager && <><ShopSettings flash={flash} /><CatalogQr /></>}
       <Categories isManager={isManager} flash={flash} />
       <Suppliers isManager={isManager} flash={flash} />
-      <Employees isManager={isManager} flash={flash} />
+      {isManager && <Employees isManager={isManager} isOwner={isOwner} flash={flash} />}
     </>
   )
 }
@@ -92,11 +94,21 @@ function Suppliers({ isManager, flash }) {
 
 const emptyEmployee = { firstName: '', lastName: '', role: 'Staff', phone: '', email: '', username: '', password: '' }
 
-function Employees({ isManager, flash }) {
+function Employees({ isManager, isOwner, flash }) {
   const [rows, load] = useList('/api/employees', flash)
   const [f, setF] = useState(emptyEmployee)
   const [editingId, setEditingId] = useState(null)
+  const [usernameEdit, setUsernameEdit] = useState(null)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+
+  const visibleRows = isOwner ? rows : rows.filter(e => e.role === 'Staff')
+
+  const renameUsername = async (emp) => {
+    const username = prompt(`New username for ${emp.firstName} ${emp.lastName}:`, emp.username || '')
+    if (username === null) return
+    try { await api.put(`/api/employees/${emp.employeeId}/username`, { username }); flash('ok', 'Username updated. The employee must sign in again.'); load() }
+    catch (err) { flash('error', err.message) }
+  }
 
   const startEdit = (e) => {
     setF({ ...emptyEmployee, firstName: e.firstName, lastName: e.lastName, role: e.role === 'Manager' ? 'Manager' : 'Staff', phone: e.phone ?? '', email: e.email ?? '' })
@@ -126,7 +138,7 @@ function Employees({ isManager, flash }) {
   }
 
   const resetPassword = async (emp) => {
-    const pw = prompt(`New password for ${emp.firstName} ${emp.lastName} (at least 6 characters):`)
+    const pw = prompt(`New password for ${emp.firstName} ${emp.lastName} (at least 8 characters):`)
     if (pw === null) return
     try { await api.post(`/api/employees/${emp.employeeId}/reset-password`, { newPassword: pw }); flash('ok', 'Password reset. The person must sign in again.') }
     catch (err) { flash('error', err.message) }
@@ -134,7 +146,8 @@ function Employees({ isManager, flash }) {
 
   return (
     <div className="card">
-      <h2>Employees</h2>
+      <h2>{isOwner ? 'Account management' : 'Staff management'}</h2>
+      <p className="hint">{isOwner ? 'Owner can manage Manager and Staff accounts.' : 'Manager can manage Staff accounts only.'} Disabled accounts are retained to preserve historical sales and audit records.</p>
       {isManager && (
         <form className="grid" onSubmit={save}>
           <label>First name<input required value={f.firstName} onChange={set('firstName')} /></label>
@@ -142,13 +155,13 @@ function Employees({ isManager, flash }) {
           <label>Role
             <select value={f.role} onChange={set('role')}>
               <option>Staff</option>
-              <option>Manager</option>
+              {isOwner && <option>Manager</option>}
             </select>
           </label>
           <label>Phone<input value={f.phone} onChange={set('phone')} /></label>
           <label>Email (unique)<input value={f.email} onChange={set('email')} /></label>
           {!editingId && <label>Username (unique)<input required value={f.username} onChange={set('username')} /></label>}
-          {!editingId && <label>Password (min 6)<input required type="password" minLength="6" value={f.password} onChange={set('password')} /></label>}
+          {!editingId && <label>Password (min 8)<input required type="password" minLength="8" value={f.password} onChange={set('password')} /></label>}
           <div>
             <button className="primary">{editingId ? 'Update' : 'Add'}</button>{' '}
             {editingId && <button type="button" className="small" onClick={cancelEdit}>Cancel</button>}
@@ -158,13 +171,14 @@ function Employees({ isManager, flash }) {
       <div className="tablewrap"><table>
         <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Username</th><th>Phone</th><th>Email</th><th>Status</th>{isManager && <th></th>}</tr></thead>
         <tbody>
-          {rows.map((e) => (
+          {visibleRows.map((e) => (
             <tr key={e.employeeId}>
               <td>{e.employeeId}</td><td>{e.firstName} {e.lastName}</td><td>{e.role}</td><td>{e.username}</td><td>{e.phone}</td><td>{e.email}</td>
               <td><span className={`badge ${e.isActive === 1 ? 'Active' : 'Disabled'}`}>{e.isActive === 1 ? 'Active' : 'Disabled'}</span></td>
               {isManager && (
                 <td className="actions">
                   <button className="small" onClick={() => startEdit(e)}>Edit</button>
+                  <button className="small" onClick={() => renameUsername(e)}>Rename username</button>
                   <button className="small" onClick={() => resetPassword(e)}>Reset password</button>
                   <button className={`small${e.isActive === 1 ? ' danger' : ''}`} onClick={() => toggleActive(e)}>{e.isActive === 1 ? 'Disable' : 'Enable'}</button>
                 </td>
@@ -214,4 +228,11 @@ function ShopSettings({ flash }) {
       </p>
     </div>
   )
+}
+
+
+function CatalogQr() {
+  const [url, setUrl] = useState(window.location.origin)
+  useEffect(() => { api.get('/api/settings').then(v => { if (v.website_url) setUrl(v.website_url.replace(/\/$/, '')) }).catch(() => {}) }, [])
+  return <div className="card"><h2>Public catalogue QR code</h2><p className="hint">Customers can scan this QR code to open the AURALUCIS product catalogue. Receipt verification QR codes remain separate.</p><div style={{display:'flex',alignItems:'center',gap:18,flexWrap:'wrap'}}><QrCode text={url} size={150}/><div><b>{url}</b><p className="hint">Print this QR code for your shop counter or display.</p></div></div></div>
 }

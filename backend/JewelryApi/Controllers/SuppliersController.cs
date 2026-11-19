@@ -21,7 +21,7 @@ public class SuppliersController(DbConnectionFactory db) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Create(Supplier s)
     {
         using var conn = db.Create();

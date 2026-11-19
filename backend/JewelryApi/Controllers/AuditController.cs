@@ -8,7 +8,7 @@ namespace JewelryApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Manager")]
+[Authorize(Roles = "Manager,Owner")]
 public class AuditController(DbConnectionFactory db) : ControllerBase
 {
     // Latest 500 audit entries, optionally for one entity (Product, Order, Employee, ...).

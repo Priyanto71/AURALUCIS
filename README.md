@@ -40,7 +40,7 @@ AURALUCIS manages the daily work of a jewelry shop: products and categories, sup
 
 ```
 AURALUCIS/
-  database/            SQL scripts (run in numeric order, 01 to 11)
+  database/            SQL scripts (fresh install: migrations 01 to 13)
   backend/JewelryApi/  ASP.NET Core Web API
   frontend/            React + Vite app
   scripts/             backup and restore scripts
@@ -62,16 +62,10 @@ Diagrams: [ER diagram](docs/ER_Diagram_Jewelry.png) | [Class diagram](docs/Class
 ## Getting started
 
 ### 1. Database
-```sql
--- as SYSTEM
-CREATE USER your_user IDENTIFIED BY your_password;
-GRANT CONNECT, RESOURCE, CREATE VIEW TO your_user;
-ALTER USER your_user QUOTA UNLIMITED ON USERS;
-```
-Connect as that user and run the scripts in `database/` in order: `01` to `11`. Run each only once. Take a backup before each upgrade script.
 
-Demo logins created by `06`: `admin` / `admin123` (Manager) and `staff` / `staff123` (Staff). Change them for real use.
+For a fresh installation, follow [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md). It explains how to prepare an empty Oracle schema and run `database/install_all.sql` (migrations 1 to 13).
 
+For an existing database, do not run the full installer. Back up first and follow the applicable upgrade instructions in the documentation.
 ### 2. Backend
 ```
 cd backend/JewelryApi
@@ -130,9 +124,11 @@ The QR code opens `<website link>/verify/<random code>`. `localhost` only works 
 | POST | `/api/stock/restock`, `/api/stock/adjust` | Manager | add stock with cost / adjust stock |
 | GET | `/api/stock/transactions` | logged in | stock history |
 
-## Fresh install in one step
-See [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md): create an empty Oracle user, then run `scripts\fresh_install.bat`. It installs scripts 01 to 11 and checks them.
+## Fresh install
 
+See [docs/FRESH_INSTALL.md](docs/FRESH_INSTALL.md) for the complete fresh-install procedure, including Oracle setup, migrations 1 to 13, backend configuration and first Owner account creation.
+
+For Owner setup, public catalogue configuration, Cloudinary and password recovery, see [docs/OWNER_CATALOG_SETUP.md](docs/OWNER_CATALOG_SETUP.md).
 ## Checking the installation
 - `database/check_install.sql`: run in SQL*Plus. It lists any missing table, column or package, and any object that failed to compile.
 - `scripts/smoke_test.ps1`: with the API running, `powershell -ExecutionPolicy Bypass -File scripts\smoke_test.ps1` checks logins, roles, every list, the public receipt and prints PASS or FAIL. Add `-Full` to also make a test sale, payment, return and stock adjustment.
@@ -156,3 +152,10 @@ See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) and the scripts in `scripts
 - [x] Supplier purchase records and supplier payments
 - [ ] Branch stock requests and approval
 - [ ] Product images
+
+
+## Owner, Public Catalogue and Version 13 update
+
+See [Owner and Public Catalogue Setup](docs/OWNER_CATALOG_SETUP.md) for Owner account setup, Cloudinary configuration, password recovery, role permissions and public product catalogue setup.
+
+A fresh installation runs migrations 1 to 13 through `database/install_all.sql`. For an existing database, never run the full installer. Back up first and apply only the unapplied migrations. `database/upgrade_13.sql` upgrades an existing version 12 database to version 13; it must be run only once.

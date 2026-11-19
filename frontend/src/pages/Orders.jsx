@@ -7,7 +7,7 @@ import Receipt from '../components/Receipt.jsx'
 const METHODS = ['Cash', 'Card', 'bKash', 'Nagad', 'Bank']
 
 export default function Orders({ user, initialQuery }) {
-  const isManager = user.role === 'Manager'
+  const isManager = ['Manager', 'Owner'].includes(user.role)
   const [orders, setOrders] = useState([])
   const [open, setOpen] = useState(null)
   const [items, setItems] = useState([])

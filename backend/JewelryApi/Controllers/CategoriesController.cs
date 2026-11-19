@@ -20,7 +20,7 @@ public class CategoriesController(DbConnectionFactory db) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Create(Category c)
     {
         using var conn = db.Create();

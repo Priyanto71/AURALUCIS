@@ -20,7 +20,44 @@ export default function Receipt({ orderId, onClose }) {
     api.get(`/api/orders/${orderId}/receipt`).then(setR).catch((e) => setMsg({ type: 'error', text: e.message }))
   }, [orderId])
 
-  const text = r && `${r.shopName} receipt ${r.receiptNo}: total ${money(r.totalAmount)}, paid ${money(r.paidAmount)}, due ${money(r.dueAmount)}. Check: ${r.publicUrl}`
+  const text = r && [
+  r.shopName,
+  r.shopTagline,
+  '',
+  `Dear ${r.customerName || 'Customer'},`,
+  'Thank you for your purchase!',
+  '',
+  `Receipt: ${r.receiptNo}`,
+  `Date: ${new Date(r.orderDate).toLocaleString()}`,
+  '',
+  'ITEMS',
+  '--------------------------------',
+  ...r.items.map(i =>
+    `${i.productName}\n` +
+    `Qty: ${i.quantity} | Price: ${money(i.unitPrice)} | Total: ${money(i.lineTotal)}`
+  ),
+  '--------------------------------',
+  `Subtotal: ${money(r.subTotal)}`,
+  ...(r.discountAmount > 0
+    ? [`Discount: -${money(r.discountAmount)}`]
+    : []),
+  ...(r.vatAmount > 0
+    ? [`VAT (${Number(r.vatPercent)}%): ${money(r.vatAmount)}`]
+    : []),
+  ...(r.returnedAmount > 0
+    ? [`Returned items (credit): -${money(r.returnedAmount)}`]
+    : []),
+  '',
+  `TOTAL: ${money(r.totalAmount)}`,
+  `Paid: ${money(r.paidAmount)}`,
+  `Due: ${money(r.dueAmount)}`,
+  '',
+  `View receipt: ${r.publicUrl}`,
+  '',
+  'Thank you for choosing AURALUCIS.',
+  r.shopAddress,
+  r.shopPhone
+].filter(x => x !== undefined && x !== null).join('\n')
 
   const downloadPdf = async () => {
     setBusy('pdf'); setMsg(null)

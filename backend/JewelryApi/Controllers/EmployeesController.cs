@@ -17,28 +17,35 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
         "SELECT employee_id, first_name, last_name, role, phone, email, username, is_active FROM employees WHERE employee_id = :id";
 
     [HttpGet]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> GetAll()
     {
         using var conn = db.Create();
+        var filter = User.IsInRole("Owner") ? "WHERE LOWER(role) IN ('manager','staff')" : "WHERE LOWER(role)='staff'";
         var rows = await conn.QueryAsync<Employee>(
-            @"SELECT employee_id, first_name, last_name, role, phone, email, username, is_active
-              FROM employees ORDER BY last_name, first_name");
+            $@"SELECT employee_id, first_name, last_name, role, phone, email, username, is_active
+               FROM employees {filter} ORDER BY last_name, first_name");
         return Ok(rows);
     }
 
     // Manager only: creates the employee together with a login (password is stored as a hash).
     [HttpPost]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Create(EmployeeCreateRequest e)
     {
-        if (string.IsNullOrWhiteSpace(e.Username) || string.IsNullOrWhiteSpace(e.Password) || e.Password.Length < 6)
-            return BadRequest(new { error = "Username is required and password must be at least 6 characters." });
+        var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Staff";
+        if (e.Role is not ("Manager" or "Staff")) return BadRequest(new { error = "Role must be Manager or Staff." });
+        if (actorRole == "Manager" && e.Role != "Staff") return Forbid();
+        if (string.IsNullOrWhiteSpace(e.Username) || string.IsNullOrWhiteSpace(e.Password) || e.Password.Length < 8)
+            return BadRequest(new { error = "Username is required and password must be at least 8 characters." });
 
         using var conn = db.Create();
+        var duplicate = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM employees WHERE LOWER(username)=LOWER(:u)", new { u = e.Username.Trim() });
+        if (duplicate > 0) return Conflict(new { error = "That username is already in use." });
         var id = await conn.ExecuteScalarAsync<int>("SELECT employees_seq.NEXTVAL FROM DUAL");
         await conn.ExecuteAsync(
-            @"INSERT INTO employees (employee_id, first_name, last_name, role, phone, email, username, password_hash)
-              VALUES (:id, :fn, :ln, :role, :phone, :email, :username, :hash)",
+            @"INSERT INTO employees (employee_id, first_name, last_name, role, phone, email, username, password_hash, must_change_password)
+              VALUES (:id, :fn, :ln, :role, :phone, :email, :username, :hash, 1)",
             new
             {
                 id, fn = e.FirstName, ln = e.LastName, role = e.Role, phone = e.Phone, email = e.Email,
@@ -50,15 +57,16 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
 
     // Manager only: change name, role, phone, email (username stays the same).
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Update(int id, EmployeeUpdateRequest e)
     {
-        if (e.Role != "Manager" && e.Role != "Staff")
-            return BadRequest(new { error = "Role must be Manager or Staff." });
-
+        var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Staff";
+        if (e.Role != "Manager" && e.Role != "Staff") return BadRequest(new { error = "Role must be Manager or Staff." });
         using var conn = db.Create();
         var current = await conn.QueryFirstOrDefaultAsync<Employee>(SelectOne, new { id });
         if (current is null) return NotFound(new { error = "Employee not found." });
+        if (current.Role == "Owner" || (actorRole == "Manager" && current.Role != "Staff")) return Forbid();
+        if (actorRole == "Manager" && e.Role != "Staff") return Forbid();
 
         // never leave the shop without an active Manager
         if (IsActiveManager(current) && e.Role != "Manager" && !await HasOtherActiveManager(conn, id))
@@ -80,7 +88,7 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
 
     // Manager only: disable / enable a login. Disabled people are signed out at once.
     [HttpPost("{id:int}/active")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> SetActive(int id, SetActiveRequest req)
     {
         var myId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -90,6 +98,8 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
         using var conn = db.Create();
         var current = await conn.QueryFirstOrDefaultAsync<Employee>(SelectOne, new { id });
         if (current is null) return NotFound(new { error = "Employee not found." });
+        var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Staff";
+        if (current.Role == "Owner" || (actorRole == "Manager" && current.Role != "Staff")) return Forbid();
 
         if (!req.Active && IsActiveManager(current) && !await HasOtherActiveManager(conn, id))
             return BadRequest(new { error = "At least one active Manager is required." });
@@ -105,21 +115,44 @@ public class EmployeesController(DbConnectionFactory db, TokenStore tokens) : Co
 
     // Manager only: set a new password for someone who forgot theirs.
     [HttpPost("{id:int}/reset-password")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> ResetPassword(int id, ResetPasswordRequest req)
     {
-        if (string.IsNullOrEmpty(req.NewPassword) || req.NewPassword.Length < 6)
-            return BadRequest(new { error = "Password must be at least 6 characters." });
+        if (string.IsNullOrEmpty(req.NewPassword) || req.NewPassword.Length < 8)
+            return BadRequest(new { error = "Password must be at least 8 characters." });
 
         using var conn = db.Create();
+        var targetRole = await conn.ExecuteScalarAsync<string?>("SELECT role FROM employees WHERE employee_id = :id", new { id });
+        var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Staff";
+        if (targetRole is null) return NotFound(new { error = "Employee not found." });
+        if (targetRole == "Owner" || (actorRole == "Manager" && targetRole != "Staff")) return Forbid();
         var n = await conn.ExecuteAsync(
-            "UPDATE employees SET password_hash = :h WHERE employee_id = :id",
+            "UPDATE employees SET password_hash = :h, must_change_password = 1 WHERE employee_id = :id",
             new { h = PasswordHasher.Hash(req.NewPassword), id });
         if (n == 0) return NotFound(new { error = "Employee not found." });
 
         tokens.RevokeEmployee(id);
 
         await AuditLogger.LogAsync(db, User.GetEmployeeId(), "PASSWORD_RESET", "Employee", id.ToString(), "Manager reset this password");
+        return NoContent();
+    }
+
+    [HttpPut("{id:int}/username")]
+    [Authorize(Roles = "Owner,Manager")]
+    public async Task<IActionResult> RenameUsername(int id, UsernameUpdateRequest req)
+    {
+        var username = (req.Username ?? "").Trim();
+        if (username.Length < 3 || username.Length > 50) return BadRequest(new { error = "Username must be 3 to 50 characters." });
+        var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Staff";
+        using var conn = db.Create();
+        var targetRole = await conn.ExecuteScalarAsync<string?>("SELECT role FROM employees WHERE employee_id = :id", new { id });
+        if (targetRole is null) return NotFound();
+        if (targetRole == "Owner" || (actorRole == "Manager" && targetRole != "Staff")) return Forbid();
+        var duplicate = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM employees WHERE LOWER(username)=LOWER(:u) AND employee_id<>:id", new { u = username, id });
+        if (duplicate > 0) return Conflict(new { error = "That username is already in use." });
+        await conn.ExecuteAsync("UPDATE employees SET username = :u WHERE employee_id = :id", new { u = username, id });
+        tokens.RevokeEmployee(id);
+        await AuditLogger.LogAsync(db, User.GetEmployeeId(), "USERNAME_CHANGE", "Employee", id.ToString(), $"Username changed to {username}");
         return NoContent();
     }
 

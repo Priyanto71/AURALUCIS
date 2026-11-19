@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, money, downloadCsv } from '../api.js'
 import Msg from './Messages.jsx'
 
-const empty = { productName: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, makingType: 'FIXED', makingPercent: '', pricingMode: 'FIXED', unitPrice: '', costPrice: 0, stockQuantity: 0 }
+const empty = { productName: '', sku: '', barcode: '', hallmarkNumber: '', hallmarkDetails: '', certificateNumber: '', certificateIssuer: '', certificateDate: '', categoryId: '', supplierId: '', metalType: 'Gold', purity: '', weightGrams: '', makingCharge: 0, makingType: 'FIXED', makingPercent: '', pricingMode: 'FIXED', unitPrice: '', costPrice: 0, stockQuantity: 0, description: '', imageUrl: '', isPublished: 0 }
 
 export default function Products({ user }) {
-  const isManager = user.role === 'Manager'
+  const isManager = ['Manager', 'Owner'].includes(user.role)
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -29,7 +29,7 @@ export default function Products({ user }) {
   const metals = useMemo(() => [...new Set(products.map((p) => p.metalType))].sort(), [products])
 
   const shown = products.filter((p) => {
-    const text = `${p.productName} ${p.categoryName ?? ''} ${p.supplierName ?? ''} ${p.metalType} ${p.purity ?? ''}`.toLowerCase()
+    const text = `${p.productName} ${p.sku ?? ''} ${p.barcode ?? ''} ${p.hallmarkNumber ?? ''} ${p.certificateNumber ?? ''} ${p.categoryName ?? ''} ${p.supplierName ?? ''} ${p.metalType} ${p.purity ?? ''}`.toLowerCase()
     return text.includes(q.toLowerCase())
       && (!fCategory || p.categoryName === fCategory)
       && (!fMetal || p.metalType === fMetal)
@@ -42,10 +42,14 @@ export default function Products({ user }) {
     try {
       const p = await api.get(`/api/products/${id}`)
       setForm({
-        productName: p.productName, categoryId: p.categoryId ?? '', supplierId: p.supplierId ?? '',
+        productName: p.productName, sku: p.sku ?? '', barcode: p.barcode ?? '',
+        hallmarkNumber: p.hallmarkNumber ?? '', hallmarkDetails: p.hallmarkDetails ?? '',
+        certificateNumber: p.certificateNumber ?? '', certificateIssuer: p.certificateIssuer ?? '',
+        certificateDate: p.certificateDate ? String(p.certificateDate).slice(0, 10) : '',
+        categoryId: p.categoryId ?? '', supplierId: p.supplierId ?? '',
         metalType: p.metalType, purity: p.purity ?? '', weightGrams: p.weightGrams,
         makingCharge: p.makingCharge, makingType: p.makingPercent != null ? 'PERCENT' : 'FIXED', makingPercent: p.makingPercent ?? '',
-        pricingMode: p.pricingMode, unitPrice: p.unitPrice, costPrice: p.costPrice, stockQuantity: p.stockQuantity,
+        pricingMode: p.pricingMode, unitPrice: p.unitPrice, costPrice: p.costPrice, stockQuantity: p.stockQuantity, description: p.description ?? '', imageUrl: p.imageUrl ?? '', isPublished: p.isPublished ?? 0,
       })
       setEditingId(id)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -69,6 +73,7 @@ export default function Products({ user }) {
       unitPrice: rate ? 0 : Number(form.unitPrice),
       costPrice: Number(form.costPrice) || 0,
       stockQuantity: Number(form.stockQuantity),
+      isPublished: Number(form.isPublished),
     }
     try {
       if (editingId) await api.put(`/api/products/${editingId}`, body)
@@ -85,8 +90,8 @@ export default function Products({ user }) {
   }
 
   const exportCsv = () => downloadCsv('products.csv',
-    ['ID', 'Name', 'Category', 'Supplier', 'Metal', 'Purity', 'Weight (g)', 'Unit price', 'Making charge', ...(isManager ? ['Cost price'] : []), 'Stock', 'Stock value'],
-    shown.map((p) => [p.productId, p.productName, p.categoryName, p.supplierName, p.metalType, p.purity, p.weightGrams, p.unitPrice, p.makingCharge, ...(isManager ? [p.costPrice] : []), p.stockQuantity, p.stockValue]))
+    ['ID', 'Name', 'SKU', 'Barcode', 'Hallmark', 'Certificate', 'Category', 'Supplier', 'Metal', 'Purity', 'Weight (g)', 'Unit price', 'Making charge', ...(isManager ? ['Cost price'] : []), 'Stock', 'Stock value'],
+    shown.map((p) => [p.productId, p.productName, p.sku, p.barcode, p.hallmarkNumber, p.certificateNumber, p.categoryName, p.supplierName, p.metalType, p.purity, p.weightGrams, p.unitPrice, p.makingCharge, ...(isManager ? [p.costPrice] : []), p.stockQuantity, p.stockValue]))
 
   return (
     <>
@@ -96,6 +101,17 @@ export default function Products({ user }) {
           <h2>{editingId ? `Edit product #${editingId}` : 'Add product'}</h2>
           <form className="grid" onSubmit={save}>
             <label>Name<input required value={form.productName} onChange={set('productName')} /></label>
+            <label>SKU<input value={form.sku} onChange={set('sku')} maxLength={50} /></label>
+            <label>Barcode<input value={form.barcode} onChange={set('barcode')} maxLength={100} /></label>
+            <label>Hallmark number<input value={form.hallmarkNumber} onChange={set('hallmarkNumber')} maxLength={100} /></label>
+            <label>Hallmark details<input value={form.hallmarkDetails} onChange={set('hallmarkDetails')} maxLength={500} /></label>
+            <label>Certificate number<input value={form.certificateNumber} onChange={set('certificateNumber')} maxLength={100} /></label>
+            <label>Certificate issuer<input value={form.certificateIssuer} onChange={set('certificateIssuer')} maxLength={150} /></label>
+            <label>Certificate date<input type="date" value={form.certificateDate} onChange={set('certificateDate')} /></label>
+            <label>Description<textarea rows={3} value={form.description} onChange={e => setForm({...form, description:e.target.value})}/></label>
+            <label>Product image (JPG, PNG, WEBP; max 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp" onChange={async e => { const file=e.target.files?.[0]; if(!file)return; try { const r=await api.upload('/api/catalog/image',file); setForm(f=>({...f,imageUrl:r.imageUrl})); setMsg({type:'ok',text:'Image uploaded to Cloudinary.'}) } catch(err) { setMsg({type:'error',text:err.message}) } }}/></label>
+            <label>Image URL<input value={form.imageUrl} onChange={set('imageUrl')} placeholder="Cloudinary URL"/></label>
+            <label className="checkline"><input type="checkbox" checked={!!Number(form.isPublished)} onChange={e=>setForm({...form,isPublished:e.target.checked?1:0})}/> Show in public catalogue</label>
             <label>Category
               <select value={form.categoryId} onChange={set('categoryId')}>
                 <option value="">-</option>

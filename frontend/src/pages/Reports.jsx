@@ -22,7 +22,22 @@ export default function Reports() {
   }
   useEffect(() => { run() }, [])
 
-  const quick = (n) => { setFrom(ymd(daysAgo(n))); setTo(ymd(new Date())) }
+
+  const quick = async (n) => {
+    const nextFrom = ymd(daysAgo(n))
+    const nextTo = ymd(new Date())
+
+    setFrom(nextFrom)
+    setTo(nextTo)
+
+    try {
+      setData(await api.get(`/api/reports/sales?from=${nextFrom}&to=${nextTo}`))
+      setMsg(null)
+    } catch (e) {
+      setMsg({ type: 'error', text: e.message })
+    }
+  }
+
   const s = data?.summary
 
   const table = (title, rows, qtyTitle, file, withProfit) => (

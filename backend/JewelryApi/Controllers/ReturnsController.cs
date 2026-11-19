@@ -13,7 +13,7 @@ namespace JewelryApi.Controllers;
 // Returns, refunds and exchanges. Money goes back to the customer, so this is for Managers only.
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Manager")]
+[Authorize(Roles = "Manager,Owner")]
 public class ReturnsController(DbConnectionFactory db) : ControllerBase
 {
     private static readonly string[] RefundMethods = { "Cash", "Card", "bKash", "Nagad", "Bank" };
@@ -86,10 +86,10 @@ public class ReturnsController(DbConnectionFactory db) : ControllerBase
                     new { p_return_id = returnId, p_method = req.RefundMethod, p_amount = s.RefundableAmount, p_new_order_id = (int?)null, p_employee_id = employeeId },
                     tx, commandType: CommandType.StoredProcedure);
             }
-            tx.Commit();
-
-            await AuditLogger.LogAsync(db, employeeId, "RETURN", "Order", req.OrderId.ToString(),
+            await AuditLogger.LogAsync(conn, tx, employeeId, "RETURN", "Order", req.OrderId.ToString(),
                 $"Return #{returnId}: credit {s.CreditAmount}, refunded {s.RefundableAmount} by {req.RefundMethod}. Reason: {req.Reason}");
+
+            tx.Commit();
             return Ok(new { returnId, credit = s.CreditAmount, refunded = s.RefundableAmount });
         }
         catch
@@ -180,10 +180,10 @@ public class ReturnsController(DbConnectionFactory db) : ControllerBase
                     new { p_order_id = newOrderId, p_amount = paid, p_method = method, p_employee_id = employeeId, p_note = "Payment at exchange" },
                     tx, commandType: CommandType.StoredProcedure);
             }
-            tx.Commit();
-
-            await AuditLogger.LogAsync(db, employeeId, "EXCHANGE", "Order", req.OrderId.ToString(),
+            await AuditLogger.LogAsync(conn, tx, employeeId, "EXCHANGE", "Order", req.OrderId.ToString(),
                 $"Return #{returnId} (credit {s.CreditAmount}) exchanged for new order #{newOrderId} (total {newTotal}), customer paid {paid} by {method}. Reason: {req.Reason}");
+
+            tx.Commit();
             return Ok(new { returnId, newOrderId, credit = s.CreditAmount, applied = s.RefundableAmount, newTotal, paid, due = difference - paid });
         }
         catch

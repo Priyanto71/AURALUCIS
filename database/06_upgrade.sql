@@ -1,27 +1,17 @@
--- =========================================================
--- AURALUCIS - 06: UPGRADE (run ONCE, as the schema owner, after 01-05)
---   * employee login columns + demo logins
+﻿-- =========================================================
+-- AURALUCIS - 06: UPGRADE (run ONCE, as schema owner, after 01-05)
+--   * employee login columns
 --   * multi-product sales (create_order + add_order_item)
 --   * making charge included in the sale price
 --   * row locking on stock, status check on cancel, input checks
--- Demo logins:  admin / admin123 (Manager)   staff / staff123 (Staff)
 -- =========================================================
 
 -- 1. LOGIN COLUMNS
+-- Accounts are provisioned separately; never store demo passwords here.
 ALTER TABLE employees ADD (username VARCHAR2(50), password_hash VARCHAR2(200));
 ALTER TABLE employees ADD CONSTRAINT uq_employees_username UNIQUE (username);
 
-UPDATE employees
-SET username = 'admin',
-    password_hash = '100000.aV9iZnvobyt+g2R5IWOvHw==.ipxFUP2WGTKD7+3xHpuJjyyeKe4yCwP/9dt4MRf9938='
-WHERE email = 'sarah.j@store.com';
-
-INSERT INTO employees (first_name, last_name, role, phone, email, username, password_hash)
-VALUES ('Rahim', 'Uddin', 'Staff', '+8801700000000', 'rahim@store.com', 'staff',
-        '100000.+tEBt69oag4cVGNAaO6JVw==.C3cAICLr22v35Nowh7x3ESHvvcGl3h3mZaAraCdnF8o=');
-
 COMMIT;
-
 -- 2. FINAL PACKAGE
 CREATE OR REPLACE PACKAGE pkg_jewelry AS
     -- Steps of a multi-product sale (the API runs them in ONE transaction)

@@ -6,7 +6,7 @@ const REASONS_OUT = ['Damaged', 'Lost', 'Stolen', 'Counting correction', 'Other'
 const REASONS_IN = ['Found', 'Counting correction', 'Returned by customer', 'Other']
 
 export default function Stock({ user }) {
-  const isManager = user.role === 'Manager'
+  const isManager = ['Manager', 'Owner'].includes(user.role)
   const [products, setProducts] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [txns, setTxns] = useState([])

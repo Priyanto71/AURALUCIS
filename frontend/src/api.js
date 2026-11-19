@@ -20,11 +20,17 @@ async function request(method, url, body) {
     clearUser()
     window.dispatchEvent(new Event('auth-expired'))
   }
-  if (res.status === 403) throw new Error('Only a Manager can do this.')
 
   if (!res.ok) {
     let msg = `Request failed (${res.status})`
-    try { msg = (await res.json()).error || msg } catch { /* no JSON body */ }
+    try {
+  const data = await res.json()
+  msg = data.error || (res.status === 403
+    ? 'You do not have permission to perform this action.'
+    : msg)
+} catch {
+  if (res.status === 403) msg = 'You do not have permission to perform this action.'
+}
     throw new Error(msg)
   }
   return res.status === 204 ? null : res.json()
@@ -35,6 +41,23 @@ export const api = {
   post: (url, body) => request('POST', url, body ?? {}),
   put: (url, body) => request('PUT', url, body),
   del: (url) => request('DELETE', url),
+  upload: async (url, file) => {
+    const user = getUser(); const data = new FormData(); data.append('file', file)
+    const res = await fetch(url, { method: 'POST', headers: user?.token ? { Authorization: `Bearer ${user.token}` } : {}, body: data })
+    if (!res.ok) {
+  let msg = res.status === 403
+    ? 'You do not have permission to perform this action.'
+    : `Request failed (${res.status})`
+
+  try {
+    const data = await res.json()
+    msg = data.error || msg
+  } catch {}
+
+  throw new Error(msg)
+}
+    return res.json()
+  },
 }
 
 export const money = (n) => Number(n ?? 0).toFixed(2)

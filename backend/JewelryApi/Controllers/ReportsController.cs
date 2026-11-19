@@ -105,7 +105,7 @@ public class ReportsController(DbConnectionFactory db) : ControllerBase
     // Sales and profit report for a date range (Manager only). Only Completed orders are counted.
     // GET /api/reports/sales?from=2026-10-01&to=2026-10-31
     [HttpGet("sales")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Sales([FromQuery(Name = "from")] DateTime dateFrom, [FromQuery(Name = "to")] DateTime dateTo)
     {
         var f = dateFrom.Date;

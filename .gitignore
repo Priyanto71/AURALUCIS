@@ -10,3 +10,29 @@ backend/JewelryApi/appsettings.json
 # Node
 node_modules/
 dist/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local configuration
+backend/JewelryApi/appsettings.json
+appsettings.*.local.json
+
+# Temporary backups and investigation files
+*.bak
+*.step*
+*.before_clob_fix
+*_log.txt
+missing_features_review.txt
+missing_features_core.txt
+
+# Database recovery and backup artifacts
+database/*backup*
+database/*_log.txt
+
+database/recover_13.sql

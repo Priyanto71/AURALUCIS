@@ -17,7 +17,7 @@ public class SettingsController(SettingsService settings, DbConnectionFactory db
 
     // Manager only: shop name, address, phone, VAT %, website link used in the receipt QR code.
     [HttpPut]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Save(Dictionary<string, string> values)
     {
         foreach (var (key, raw) in values)

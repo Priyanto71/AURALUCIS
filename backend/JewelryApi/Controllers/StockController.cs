@@ -13,7 +13,7 @@ namespace JewelryApi.Controllers;
 public class StockController(DbConnectionFactory db) : ControllerBase
 {
     [HttpPost("restock")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Restock(RestockRequest req)
     {
         if (req.Quantity <= 0) return BadRequest(new { error = "Quantity must be greater than 0." });
@@ -35,7 +35,7 @@ public class StockController(DbConnectionFactory db) : ControllerBase
     // Manager only. Damaged, lost, found or a counting correction.
     // QuantityChange is negative to REMOVE stock and positive to ADD it. A reason is required.
     [HttpPost("adjust")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Owner")]
     public async Task<IActionResult> Adjust(AdjustStockRequest req)
     {
         if (req.QuantityChange == 0) return BadRequest(new { error = "Adjustment quantity cannot be zero." });
@@ -66,7 +66,7 @@ public class StockController(DbConnectionFactory db) : ControllerBase
                 LEFT JOIN suppliers s ON s.supplier_id = t.supplier_id
                 ORDER BY t.txn_id DESC)
               WHERE ROWNUM <= 100")).ToList();
-        if (!User.IsInRole("Manager")) rows.ForEach(r => r.UnitCost = null); // purchase costs are for Managers only
+        if (!User.IsInRole("Manager") && !User.IsInRole("Owner")) rows.ForEach(r => r.UnitCost = null); // purchase costs are for Managers only
         return Ok(rows);
     }
 }

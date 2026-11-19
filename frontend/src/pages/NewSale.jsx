@@ -8,9 +8,16 @@ const METHODS = ['Cash', 'Card', 'bKash', 'Nagad', 'Bank']
 const STAFF_MAX_DISCOUNT = 10 // %, the server enforces the same limit
 
 export default function NewSale({ user }) {
-  const isManager = user.role === 'Manager'
+  const isManager = ['Manager', 'Owner'].includes(user.role)
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
+  const [rates, setRates] = useState([])
+  const [oldGoldEnabled, setOldGoldEnabled] = useState(false)
+  const [goldMetal, setGoldMetal] = useState('')
+  const [goldPurity, setGoldPurity] = useState('')
+  const [grossWeight, setGrossWeight] = useState('')
+  const [stoneWeight, setStoneWeight] = useState('0')
+  const [goldNotes, setGoldNotes] = useState('')
   const [vatPercent, setVatPercent] = useState(0)
   const [customerId, setCustomerId] = useState('')
   const [pickId, setPickId] = useState('')
@@ -27,8 +34,8 @@ export default function NewSale({ user }) {
 
   const load = async () => {
     try {
-      const [c, p, s] = await Promise.all([api.get('/api/customers'), api.get('/api/products'), api.get('/api/settings')])
-      setCustomers(c); setProducts(p); setVatPercent(Number(s.vat_percent) || 0)
+      const [c, p, s, r] = await Promise.all([api.get('/api/customers'), api.get('/api/products'), api.get('/api/settings'), api.get('/api/rates')])
+      setCustomers(c); setProducts(p); setVatPercent(Number(s.vat_percent) || 0); setRates(r)
     } catch (err) { setMsg({ type: 'error', text: err.message }) }
   }
   useEffect(() => { load() }, [])
@@ -67,19 +74,52 @@ export default function NewSale({ user }) {
   const net = round2(subTotal - discount)
   const vat = round2(net * vatPercent / 100)
   const total = round2(net + vat)
-  const paying = pending ? (payFull ? 0 : Number(paidNow) || 0) : (payFull ? total : Number(paidNow) || 0)
+  const availableMetals = [...new Set(rates.map((r) => r.metalType).filter(Boolean))]
+  const purityOptions = rates.filter((r) => r.metalType === goldMetal && r.purity)
+  const selectedRate = rates.find((r) => r.metalType === goldMetal && r.purity === goldPurity)
+  const netGoldWeight = Number(grossWeight || 0) - Number(stoneWeight || 0)
+  const exchangeCredit = oldGoldEnabled && selectedRate && netGoldWeight > 0
+    ? round2(netGoldWeight * Number(selectedRate.ratePerGram))
+    : 0
+  const normalPaying = pending ? (payFull ? 0 : Number(paidNow) || 0)
+    : (payFull ? total - exchangeCredit : Number(paidNow) || 0)
+  const paying = round2(exchangeCredit + normalPaying)
   const due = round2(total - paying)
 
   const submit = async (e) => {
     e.preventDefault()
     if (cart.length === 0) { setMsg({ type: 'error', text: 'Add at least one product.' }); return }
     if (overLimit) { setMsg({ type: 'error', text: `Staff can give at most ${STAFF_MAX_DISCOUNT}% discount.` }); return }
+    if (oldGoldEnabled) {
+      const gross = Number(grossWeight)
+      const stones = Number(stoneWeight)
+      if (pending) { setMsg({ type: 'error', text: 'Old-gold exchange cannot be used with a pending order.' }); return }
+      if (!selectedRate) { setMsg({ type: 'error', text: 'Select a valid metal and purity rate.' }); return }
+      if (!Number.isFinite(gross) || gross <= 0 || !Number.isFinite(stones) || stones < 0 || stones >= gross) {
+        setMsg({ type: 'error', text: 'Enter valid gross and stone weights. Net weight must be greater than zero.' }); return
+      }
+      if (gross * 1000 % 1 !== 0 || stones * 1000 % 1 !== 0) {
+        setMsg({ type: 'error', text: 'Weights can have at most 3 decimal places.' }); return
+      }
+      if (exchangeCredit > total) { setMsg({ type: 'error', text: 'Old-gold credit cannot exceed the order total.' }); return }
+      if (normalPaying < 0 || normalPaying > total - exchangeCredit) {
+        setMsg({ type: 'error', text: 'The cash/payment amount exceeds the remaining balance.' }); return
+      }
+      if (goldNotes.length > 500) { setMsg({ type: 'error', text: 'Old-gold notes must be 500 characters or fewer.' }); return }
+    }
     try {
       const r = await api.post('/api/orders/sale', {
         customerId: Number(customerId), items: cart, pending,
         discountType: discType, discountValue: discType === 'NONE' ? 0 : dv,
         paymentMethod: method,
-        paidAmount: payFull ? null : Number(paidNow) || 0,
+        paidAmount: oldGoldEnabled
+          ? normalPaying
+          : (payFull ? null : Number(paidNow) || 0),
+        oldGoldExchange: oldGoldEnabled ? {
+          metalType: goldMetal, purity: goldPurity,
+          grossWeight: Number(grossWeight), stoneWeight: Number(stoneWeight) || 0,
+          notes: goldNotes.trim() || null,
+        } : null,
       })
       setMsg({
         type: 'ok',
@@ -88,6 +128,7 @@ export default function NewSale({ user }) {
           : `Sale recorded. Order #${r.orderId}.`) + (r.due > 0 ? ` Due: ${money(r.due)}.` : ''),
       })
       setCart([]); setPending(false); setDiscType('NONE'); setDiscValue(''); setPayFull(true); setPaidNow('')
+      setOldGoldEnabled(false); setGoldMetal(''); setGoldPurity(''); setGrossWeight(''); setStoneWeight('0'); setGoldNotes('')
       setReceiptId(r.orderId); load()
     } catch (err) { setMsg({ type: 'error', text: err.message }) }
   }
@@ -142,6 +183,49 @@ export default function NewSale({ user }) {
             </div>
           )}
 
+          <h3>Old-gold exchange</h3>
+          <p>
+            <label className="checkline">
+              <input type="checkbox" checked={oldGoldEnabled} onChange={(e) => {
+                setOldGoldEnabled(e.target.checked)
+                if (e.target.checked) setPending(false)
+              }} />
+              Customer is exchanging old gold for credit
+            </label>
+          </p>
+          {oldGoldEnabled && (
+            <div className="grid">
+              <label>Metal type
+                <select required value={goldMetal} onChange={(e) => { setGoldMetal(e.target.value); setGoldPurity('') }}>
+                  <option value="">Select metal...</option>
+                  {availableMetals.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </label>
+              <label>Purity
+                <select required value={goldPurity} onChange={(e) => setGoldPurity(e.target.value)}>
+                  <option value="">Select purity...</option>
+                  {purityOptions.map((r) => <option key={`${r.metalType}-${r.purity}`} value={r.purity}>{r.purity}</option>)}
+                </select>
+              </label>
+              <label>Gross weight (grams)
+                <input type="number" min="0.001" step="0.001" required value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} />
+              </label>
+              <label>Stone weight (grams)
+                <input type="number" min="0" step="0.001" value={stoneWeight} onChange={(e) => setStoneWeight(e.target.value)} />
+              </label>
+              <label>Notes
+                <input maxLength="500" value={goldNotes} onChange={(e) => setGoldNotes(e.target.value)} />
+              </label>
+              <div className="summary">
+                <div><span>Net gold weight</span><b>{netGoldWeight > 0 ? `${netGoldWeight.toFixed(3)} g` : '—'}</b></div>
+                <div><span>Rate per gram</span><b>{selectedRate ? money(selectedRate.ratePerGram) : 'Select a rate'}</b></div>
+                <div className="grand"><span>Exchange credit</span><b>{money(exchangeCredit)}</b></div>
+              </div>
+              {!selectedRate && <p className="hint">No matching rate selected. Check the Rates page.</p>}
+              {exchangeCredit > total && <p className="msg error">Exchange credit cannot exceed the order total.</p>}
+            </div>
+          )}
+
           <h3>Discount and payment</h3>
           <div className="grid">
             <label>Discount
@@ -180,6 +264,7 @@ export default function NewSale({ user }) {
               {discount > 0 && <div><span>Discount</span><b>-{money(discount)}</b></div>}
               {vatPercent > 0 && <div><span>VAT ({vatPercent}%)</span><b>{money(vat)}</b></div>}
               <div className="grand"><span>Total to pay</span><b>{money(total)}</b></div>
+              {oldGoldEnabled && <div><span>Old-gold exchange credit</span><b>-{money(exchangeCredit)}</b></div>}
               <div><span>Paying now</span><b>{money(paying)}</b></div>
               <div className={due > 0 ? 'duecell' : ''}><span>Due</span><b>{money(due)}</b></div>
             </div>
@@ -187,7 +272,7 @@ export default function NewSale({ user }) {
 
           <p>
             <label className="checkline">
-              <input type="checkbox" checked={pending} onChange={(e) => setPending(e.target.checked)} />
+              <input type="checkbox" checked={pending} disabled={oldGoldEnabled} onChange={(e) => setPending(e.target.checked)} />
               Hold as Pending (reserve the stock now, complete the order later)
             </label>
           </p>

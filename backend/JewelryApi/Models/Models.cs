@@ -1,4 +1,4 @@
-namespace JewelryApi.Models;
+﻿namespace JewelryApi.Models;
 
 public class Category { public int CategoryId { get; set; } public string CategoryName { get; set; } = ""; public string? Description { get; set; } }
 
@@ -12,11 +12,20 @@ public class Supplier
 public class Product
 {
     public int ProductId { get; set; } public string ProductName { get; set; } = "";
+    public string? Sku { get; set; } public string? Barcode { get; set; }
+    public string? HallmarkNumber { get; set; } public string? HallmarkDetails { get; set; }
+    public string? CertificateNumber { get; set; } public string? CertificateIssuer { get; set; }
+    public DateTime? CertificateDate { get; set; }
+
+
+
+
     public int? CategoryId { get; set; } public int? SupplierId { get; set; }
     public string MetalType { get; set; } = ""; public string? Purity { get; set; }
     public decimal WeightGrams { get; set; } public decimal MakingCharge { get; set; }
     public decimal UnitPrice { get; set; } public int StockQuantity { get; set; }
     public decimal CostPrice { get; set; }
+    public string? Description { get; set; } public string? ImageUrl { get; set; } public int IsPublished { get; set; }
     public string PricingMode { get; set; } = "FIXED"; public decimal? MakingPercent { get; set; }
 }
 
@@ -24,12 +33,38 @@ public class Product
 public class ProductCatalogItem
 {
     public int ProductId { get; set; } public string ProductName { get; set; } = "";
+    public string? Sku { get; set; } public string? Barcode { get; set; }
+    public string? HallmarkNumber { get; set; } public string? HallmarkDetails { get; set; }
+    public string? CertificateNumber { get; set; } public string? CertificateIssuer { get; set; }
+    public DateTime? CertificateDate { get; set; }
+
+
+
+
     public string? CategoryName { get; set; } public string? SupplierName { get; set; }
     public string MetalType { get; set; } = ""; public string? Purity { get; set; }
     public decimal WeightGrams { get; set; } public decimal MakingCharge { get; set; }
     public decimal UnitPrice { get; set; } public int StockQuantity { get; set; }
     public decimal StockValue { get; set; } public decimal CostPrice { get; set; }
+    public string? Description { get; set; } public string? ImageUrl { get; set; } public int IsPublished { get; set; }
     public string PricingMode { get; set; } = "FIXED"; public decimal? MakingPercent { get; set; }
+}
+
+public class PublicCatalogItem
+{
+    public int ProductId { get; set; } public string ProductName { get; set; } = "";
+    public string? Sku { get; set; } public string? Barcode { get; set; }
+    public string? HallmarkNumber { get; set; } public string? HallmarkDetails { get; set; }
+    public string? CertificateNumber { get; set; } public string? CertificateIssuer { get; set; }
+    public DateTime? CertificateDate { get; set; }
+
+
+
+
+    public string? Description { get; set; } public string? ImageUrl { get; set; }
+    public string MetalType { get; set; } = ""; public string? Purity { get; set; }
+    public decimal WeightGrams { get; set; } public decimal MakingCharge { get; set; }
+    public decimal UnitPrice { get; set; } public decimal SellingPrice { get; set; }
 }
 
 public class Customer
@@ -52,7 +87,7 @@ public class EmployeeLogin
 {
     public int EmployeeId { get; set; } public string FirstName { get; set; } = ""; public string LastName { get; set; } = "";
     public string Role { get; set; } = ""; public string? Username { get; set; } public string? PasswordHash { get; set; }
-    public int IsActive { get; set; }
+    public int IsActive { get; set; } public int MustChangePassword { get; set; }
 }
 
 // Row shape of view VW_ORDER_SUMMARY
@@ -82,13 +117,33 @@ public class StockTxn
 public record LoginRequest(string Username, string Password);
 public record EmployeeCreateRequest(string FirstName, string LastName, string Role, string? Phone, string? Email, string Username, string Password);
 public record SaleLine(int ProductId, int Quantity);
-public record SaleRequest(int CustomerId, List<SaleLine> Items, bool? Pending, string? DiscountType, decimal? DiscountValue, string? PaymentMethod, decimal? PaidAmount);
+public record OldGoldExchangeRequest(
+    string MetalType,
+    string Purity,
+    decimal GrossWeight,
+    decimal StoneWeight,
+    string? Notes
+);
+
+public record SaleRequest(
+    int CustomerId,
+    List<SaleLine> Items,
+    bool? Pending,
+    string? DiscountType,
+    decimal? DiscountValue,
+    string? PaymentMethod,
+    decimal? PaidAmount,
+    OldGoldExchangeRequest? OldGoldExchange = null
+);
 public record PaymentRequest(decimal Amount, string Method, string? Note);
 public record AdjustStockRequest(int ProductId, int QuantityChange, string Reason, string? Note);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record ResetPasswordRequest(string NewPassword);
 public record EmployeeUpdateRequest(string FirstName, string LastName, string Role, string? Phone, string? Email);
 public record SetActiveRequest(bool Active);
+public record UsernameUpdateRequest(string Username);
+public record ForgotPasswordRequest(string Username);
+public record CompletePasswordResetRequest(string Token, string NewPassword);
 public record RestockRequest(int ProductId, int Quantity, string? Remarks, decimal? UnitCost, int? SupplierId);
 
 // ---- Dashboard / reports ----
@@ -215,11 +270,88 @@ public class PurchaseRow
 }
 public class PurchaseItemRow
 {
-    public int ProductId { get; set; } public string ProductName { get; set; } = ""; public int Quantity { get; set; }
+    public int ProductId { get; set; } public string ProductName { get; set; } = "";
+    public string? Sku { get; set; } public string? Barcode { get; set; }
+    public string? HallmarkNumber { get; set; } public string? HallmarkDetails { get; set; }
+    public string? CertificateNumber { get; set; } public string? CertificateIssuer { get; set; }
+    public DateTime? CertificateDate { get; set; }
+
+
+
+     public int Quantity { get; set; }
     public decimal UnitCost { get; set; } public decimal LineTotal { get; set; }
 }
 public class PurchasePaymentRow
 {
     public decimal Amount { get; set; } public string Method { get; set; } = ""; public DateTime PaidAt { get; set; }
     public string? EmployeeName { get; set; } public string? Note { get; set; }
+}
+
+
+public record OldGoldBuybackRequest(
+    int? CustomerId,
+    string MetalType,
+    string Purity,
+    decimal GrossWeight,
+    decimal StoneWeight,
+    string SettlementMethod,
+    string? PayoutReference,
+    string? Notes
+);
+
+public class OldGoldBuybackRow
+{
+    public int TransactionId { get; set; }
+    public DateTime TxnDate { get; set; }
+    public int? CustomerId { get; set; }
+    public string? CustomerName { get; set; }
+    public string EmployeeName { get; set; } = "";
+    public string MetalType { get; set; } = "";
+    public string Purity { get; set; } = "";
+    public decimal GrossWeight { get; set; }
+    public decimal StoneWeight { get; set; }
+    public decimal NetWeight { get; set; }
+    public decimal RatePerGram { get; set; }
+    public decimal ValuationAmount { get; set; }
+    public string SettlementMethod { get; set; } = "";
+    public string? PayoutReference { get; set; }
+    public string Status { get; set; } = "";
+    public string? Notes { get; set; }
+}
+
+public record ServiceJobCreateRequest(
+    int CustomerId, string JobType, string Description,
+    string? MetalType, string? Purity, decimal? WeightGrams,
+    DateTime? DueDate, decimal EstimatedCharge, string? Notes
+);
+
+public record ServiceJobStatusRequest(string Status);
+
+public record ServiceJobChargeRequest(decimal FinalCharge);
+
+public record ServiceJobPaymentRequest(decimal Amount, string Method, string? Note);
+
+public class ServiceJobRow
+{
+    public int JobId { get; set; }
+    public string JobNumber { get; set; } = "";
+    public int CustomerId { get; set; }
+    public string CustomerName { get; set; } = "";
+    public string? CustomerPhone { get; set; }
+    public int EmployeeId { get; set; }
+    public string EmployeeName { get; set; } = "";
+    public string JobType { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string? MetalType { get; set; }
+    public string? Purity { get; set; }
+    public decimal? WeightGrams { get; set; }
+    public DateTime ReceivedAt { get; set; }
+    public DateTime? DueDate { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public string Status { get; set; } = "";
+    public decimal EstimatedCharge { get; set; }
+    public decimal? FinalCharge { get; set; }
+    public decimal PaidAmount { get; set; }
+    public string? Notes { get; set; }
 }
